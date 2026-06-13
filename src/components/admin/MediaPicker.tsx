@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { listMedia } from "@/app/admin/actions";
 import { useUpload } from "@/lib/useUpload";
+import { useIntegrations } from "@/components/admin/IntegrationsContext";
 
 type MediaItem = {
   id: string;
@@ -14,14 +15,17 @@ type MediaItem = {
 };
 
 export function MediaPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
+  const { cloudinary } = useIntegrations();
   const [items, setItems] = useState<MediaItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [url, setUrl] = useState("");
   const { upload, uploading } = useUpload();
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    listMedia().then(setItems).catch(() => setItems([]));
-  }, []);
+    if (cloudinary) listMedia().then(setItems).catch(() => setItems([]));
+    else setItems([]);
+  }, [cloudinary]);
 
   async function handleFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -36,29 +40,68 @@ export function MediaPicker({ onSelect, onClose }: { onSelect: (url: string) => 
     }
   }
 
+  function useUrl() {
+    const v = url.trim();
+    if (!v) return;
+    onSelect(v);
+    onClose();
+  }
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-6" onClick={onClose}>
       <div
         className="flex h-[70vh] w-full max-w-3xl flex-col rounded-2xl bg-white p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold tracking-tight">Choose media</h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight">Add an image</h2>
           <div className="flex items-center gap-2">
-            <button className="ad-btn ad-btn-primary" onClick={() => fileRef.current?.click()} disabled={uploading}>
-              {uploading ? "Uploading..." : "Upload"}
+            <button
+              className="ad-btn ad-btn-primary"
+              onClick={() => fileRef.current?.click()}
+              disabled={!cloudinary || uploading}
+              title={cloudinary ? "Upload from your device" : "Connect Cloudinary in Settings to upload from your device"}
+            >
+              {uploading ? "Uploading..." : "Upload from device"}
             </button>
             <button className="ad-btn ad-btn-soft" onClick={onClose}>Close</button>
           </div>
           <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => handleFiles(e.target.files)} />
         </div>
+
+        {/* Paste a URL - always available, no Cloudinary needed */}
+        <div className="mb-3 flex gap-1.5">
+          <input
+            className="ad-input"
+            placeholder="Paste an image URL (https://...)"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                useUrl();
+              }
+            }}
+          />
+          <button type="button" className="ad-btn ad-btn-soft shrink-0" disabled={!url.trim()} onClick={useUrl}>
+            Use URL
+          </button>
+        </div>
+
+        {!cloudinary && (
+          <p className="mb-3 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--ad-bg)", color: "var(--ad-muted)" }}>
+            Device uploads need Cloudinary. Add your credentials in <strong>Settings</strong> to upload and build a media library, or paste an image URL above.
+          </p>
+        )}
+
         {error && <p className="mb-3 text-sm" style={{ color: "var(--ad-danger)" }}>{error}</p>}
+
         <div className="min-h-0 flex-1 overflow-y-auto">
           {items === null ? (
             <p className="text-sm" style={{ color: "var(--ad-muted)" }}>Loading...</p>
           ) : items.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--ad-muted)" }}>
-              No media yet. Upload your first image.
+              {cloudinary ? "No media yet. Upload your first image." : "Your media library appears here once Cloudinary is connected."}
             </p>
           ) : (
             <div className="grid grid-cols-4 gap-3">

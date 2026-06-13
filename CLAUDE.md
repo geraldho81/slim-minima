@@ -10,3 +10,9 @@ and CLI/REST reference. Read it before making changes.
 
 Keep it minimal - that is the brand. No em dashes or en dashes, and no AI
 vocabulary, in any generated copy, content, or UI.
+
+## Git workflow
+
+Commit and push by default after completing a change in this repo - no need to
+ask first. Commit straight to the working branch, run `npm run typecheck` and
+`npm run build` before committing, and push when the build is clean.

@@ -18,7 +18,15 @@ const NAV = [
   { href: "/admin/account", label: "Account" },
 ];
 
-export function AdminSidebar({ userName, role }: { userName: string; role: "admin" | "editor" }) {
+export function AdminSidebar({
+  userName,
+  role,
+  userImage,
+}: {
+  userName: string;
+  role: "admin" | "editor";
+  userImage: string | null;
+}) {
   const pathname = usePathname();
 
   return (
@@ -56,7 +64,17 @@ export function AdminSidebar({ userName, role }: { userName: string; role: "admi
         <a href="/" target="_blank" className="mb-3 block text-xs font-medium" style={{ color: "var(--ad-muted)" }}>
           View site ↗
         </a>
-        <div className="mb-2 truncate text-xs font-semibold">{userName}</div>
+        <Link href="/admin/account" className="mb-2 flex items-center gap-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--ad-accent-soft)] text-[11px] font-bold" style={{ color: "var(--ad-accent)" }}>
+            {userImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userImage} alt="" className="h-full w-full object-cover" />
+            ) : (
+              (userName || "?").slice(0, 1).toUpperCase()
+            )}
+          </span>
+          <span className="truncate text-xs font-semibold">{userName}</span>
+        </Link>
         <form action={logoutAction}>
           <button type="submit" className="text-xs font-medium" style={{ color: "var(--ad-muted)" }}>
             Sign out

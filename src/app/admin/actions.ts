@@ -628,6 +628,15 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
   return { ok: true as const };
 }
 
+// Any signed-in user can set or clear their own profile image.
+export async function updateOwnProfileImage(image: string | null) {
+  const me = await requireUser();
+  const value = image && image.trim() ? image.trim() : null;
+  await db.update(users).set({ image: value }).where(eq(users.id, me.id));
+  revalidatePath("/admin", "layout");
+  return { ok: true as const, image: value };
+}
+
 /* ============================== API keys ============================== */
 
 export async function createApiKey(name: string) {

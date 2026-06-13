@@ -8,6 +8,13 @@
       "when": 1781336150962,
       "tag": "0000_skinny_supreme_intelligence",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781352488737,
+      "tag": "0001_naive_black_queen",
+      "breakpoints": true
     }
   ]
 }

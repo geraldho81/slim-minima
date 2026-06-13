@@ -1,15 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { changeOwnPassword } from "@/app/admin/actions";
+import { useRouter } from "next/navigation";
+import { changeOwnPassword, updateOwnProfileImage } from "@/app/admin/actions";
+import { MediaPicker } from "@/components/admin/MediaPicker";
 
-export function AccountManager({ name, email, role }: { name: string; email: string; role: "admin" | "editor" }) {
+export function AccountManager({
+  name,
+  email,
+  role,
+  image: initialImage,
+}: {
+  name: string;
+  email: string;
+  role: "admin" | "editor";
+  image: string | null;
+}) {
+  const router = useRouter();
+  const [image, setImage] = useState(initialImage);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  async function saveImage(next: string | null) {
+    setImage(next);
+    try {
+      await updateOwnProfileImage(next);
+      router.refresh();
+    } catch {
+      setImage(initialImage);
+    }
+  }
 
   async function submit() {
     setError(null);
@@ -38,20 +63,46 @@ export function AccountManager({ name, email, role }: { name: string; email: str
 
       <section className="mb-6 rounded-xl bg-white p-5">
         <h2 className="mb-3 text-sm font-bold tracking-tight">Profile</h2>
-        <div className="grid grid-cols-2 gap-x-4">
-          <div className="ad-field">
-            <label className="ad-label">Name</label>
-            <input className="ad-input" value={name} disabled />
+        <div className="flex gap-5">
+          <div className="shrink-0 text-center">
+            <div className="mb-2 h-20 w-20 overflow-hidden rounded-full bg-[var(--ad-bg)]">
+              {image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={image} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-2xl font-bold" style={{ color: "var(--ad-muted)" }}>
+                  {(name || email).slice(0, 1).toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="flex justify-center gap-1.5">
+              <button type="button" className="ad-btn ad-btn-soft" style={{ padding: "0.3rem 0.6rem", fontSize: "0.72rem" }} onClick={() => setPickerOpen(true)}>
+                {image ? "Change" : "Add photo"}
+              </button>
+              {image && (
+                <button type="button" className="ad-btn ad-btn-soft" style={{ padding: "0.3rem 0.6rem", fontSize: "0.72rem" }} onClick={() => saveImage(null)}>
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
-          <div className="ad-field">
-            <label className="ad-label">Email</label>
-            <input className="ad-input" value={email} disabled />
+          <div className="min-w-0 flex-1">
+            <div className="ad-field">
+              <label className="ad-label">Name</label>
+              <input className="ad-input" value={name} disabled />
+            </div>
+            <div className="ad-field">
+              <label className="ad-label">Email</label>
+              <input className="ad-input" value={email} disabled />
+            </div>
+            <p className="text-xs" style={{ color: "var(--ad-muted)" }}>
+              Signed in as {role}.
+            </p>
           </div>
         </div>
-        <p className="text-xs" style={{ color: "var(--ad-muted)" }}>
-          Signed in as {role}.
-        </p>
       </section>
+
+      {pickerOpen && <MediaPicker onSelect={(u) => saveImage(u)} onClose={() => setPickerOpen(false)} />}
 
       <section className="rounded-xl bg-white p-5">
         <h2 className="mb-3 text-sm font-bold tracking-tight">Change password</h2>
