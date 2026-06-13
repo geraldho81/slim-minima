@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { contactSubmissions } from "@/db/schema";
 import { verifyReceiver } from "@/lib/contact-token";
+import { getResendConfig } from "@/lib/integration-config";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FIELDS = 40;
@@ -54,12 +55,14 @@ export async function POST(req: Request) {
 }
 
 async function sendNotification(s: { formName: string | null; data: Record<string, string>; receiver: string }) {
-  const apiKey = process.env.RESEND_API_KEY;
+  // Resend config comes from env vars or the CMS settings (env wins).
+  const resend = await getResendConfig();
+  const apiKey = resend.apiKey;
   if (!apiKey) return; // Resend is optional - submissions are always stored in the DB.
 
-  const from = process.env.EMAIL_FROM || "Slim Minima <onboarding@resend.dev>";
-  // Per-form receiver (set in the block) takes priority, then EMAIL_TO.
-  const to = (s.receiver && EMAIL_RE.test(s.receiver) ? s.receiver : process.env.EMAIL_TO) || "";
+  const from = resend.from || "Slim Minima <onboarding@resend.dev>";
+  // Per-form receiver (set in the block) takes priority, then the configured EMAIL_TO.
+  const to = (s.receiver && EMAIL_RE.test(s.receiver) ? s.receiver : resend.to) || "";
   if (!to) return;
 
   const lines = Object.entries(s.data).map(([k, v]) => `${k}: ${v || "-"}`);

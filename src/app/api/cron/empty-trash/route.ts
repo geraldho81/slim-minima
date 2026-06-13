@@ -3,6 +3,7 @@ import { lt, isNotNull, and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { mediaTrash, pages, posts } from "@/db/schema";
 import { deleteCloudinaryMedia } from "@/lib/cloudinary";
+import { getMediaTrashTtlDays } from "@/lib/integration-config";
 
 // Runs daily (see crons in vercel.json). Permanently removes anything that has sat
 // in the trash longer than MEDIA_TRASH_TTL_DAYS: media is deleted from
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const ttlDays = Number(process.env.MEDIA_TRASH_TTL_DAYS) || 30;
+  const ttlDays = await getMediaTrashTtlDays();
   const cutoff = new Date(Date.now() - ttlDays * 86400000);
 
   // --- Media: delete the Cloudinary asset, then drop the row ---

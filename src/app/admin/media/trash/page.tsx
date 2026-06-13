@@ -2,12 +2,13 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { mediaTrash } from "@/db/schema";
 import { MediaTrash } from "@/components/admin/MediaTrash";
+import { getMediaTrashTtlDays } from "@/lib/integration-config";
 
 export const dynamic = "force-dynamic";
 
 export default async function MediaTrashPage() {
   const rows = await db.select().from(mediaTrash).orderBy(desc(mediaTrash.trashedAt));
-  const ttlDays = Number(process.env.MEDIA_TRASH_TTL_DAYS) || 30;
+  const ttlDays = await getMediaTrashTtlDays();
   const items = rows.map((r) => ({
     publicId: r.publicId,
     resourceType: r.resourceType,

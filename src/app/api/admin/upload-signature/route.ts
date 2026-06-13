@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { auth } from "@/lib/auth";
 import { getCloudinaryCreds } from "@/lib/cloudinary-config";
+import { getCloudinaryFolder } from "@/lib/integration-config";
 
 export async function POST() {
   const session = await auth();
@@ -15,7 +16,7 @@ export async function POST() {
   }
   const { cloudName, apiKey, apiSecret } = creds;
 
-  const folder = process.env.CLOUDINARY_FOLDER || "slim-minima";
+  const folder = await getCloudinaryFolder();
   const timestamp = Math.floor(Date.now() / 1000);
   // Cloudinary signature: sha1 of the sorted params + API secret
   const toSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;

@@ -137,6 +137,13 @@ without DATABASE_URL). Schema in `src/db/schema.ts`; migrations in `drizzle/`.
 | `RESEND_API_KEY` | optional - contact-form email notifications |
 | `EMAIL_FROM` / `EMAIL_TO` | fallback notification sender/recipient |
 
+Only `DATABASE_URL` and `AUTH_SECRET` must be env vars. Cloudinary credentials,
+the upload folder, the trash retention, and Resend email can also be set in the
+CMS (Admin -> Settings) and resolve env-first, then settings - so a site can go
+live with just the two required vars and be connected later without a redeploy.
+`CRON_SECRET` and `NEXT_PUBLIC_SITE_URL` stay env-only. Resolver helpers:
+`src/lib/cloudinary-config.ts` and `src/lib/integration-config.ts`.
+
 `.env.example` covers only the essentials and explains where to get each value.
 The seed admin is created with defaults (email `admin@example.com`, a generated
 password printed once); override with `SEED_ADMIN_EMAIL/PASSWORD/NAME` in

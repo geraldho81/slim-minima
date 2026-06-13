@@ -32,6 +32,13 @@ Vercel.
 
 Each is your own account. See `.env.example` for every variable and where to find it.
 
+**Only `DATABASE_URL` and `AUTH_SECRET` must be set as environment variables.**
+Everything else - Cloudinary, Resend email, the upload folder, the trash
+retention - can be added later **directly in the CMS** (Admin -> Settings),
+with no redeploy. So you can ship the site live first and connect the rest from
+the dashboard. Environment variables always take precedence when both are set.
+(The only env-only optionals are `CRON_SECRET` and `NEXT_PUBLIC_SITE_URL`.)
+
 ## Quick start
 
 ```bash

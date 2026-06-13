@@ -4,6 +4,7 @@ import { apiKeys, settings } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { SettingsForm } from "@/components/admin/SettingsForm";
 import { CloudinarySettings } from "@/components/admin/CloudinarySettings";
+import { IntegrationsSettings } from "@/components/admin/IntegrationsSettings";
 import { ApiKeysSection } from "@/components/admin/ApiKeysSection";
 
 export default async function SettingsPage() {
@@ -15,6 +16,13 @@ export default async function SettingsPage() {
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
 
   const envManaged = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+  const integrationsEnv = {
+    resendKey: !!process.env.RESEND_API_KEY,
+    emailFrom: !!process.env.EMAIL_FROM,
+    emailTo: !!process.env.EMAIL_TO,
+    folder: !!process.env.CLOUDINARY_FOLDER,
+    ttl: !!process.env.MEDIA_TRASH_TTL_DAYS,
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
@@ -37,6 +45,16 @@ export default async function SettingsPage() {
           secretSet: !!map.cloudinaryApiSecret,
         }}
         envManaged={envManaged}
+      />
+      <IntegrationsSettings
+        initial={{
+          emailFrom: (map.emailFrom as string) ?? "",
+          emailTo: (map.emailTo as string) ?? "",
+          resendKeySet: !!map.resendApiKey,
+          cloudinaryFolder: (map.cloudinaryFolder as string) ?? "",
+          mediaTrashTtlDays: (map.mediaTrashTtlDays as string) ?? "",
+        }}
+        env={integrationsEnv}
       />
       {user.role === "admin" && (
         <ApiKeysSection

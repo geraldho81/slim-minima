@@ -546,6 +546,35 @@ export async function saveCloudinaryConfig(values: { cloudName: string; apiKey: 
   return { ok: true as const };
 }
 
+/** Save optional integration config (Resend email + media options) into
+ *  settings. The Resend API key is write-only: empty leaves it untouched.
+ *  Admin only. Env vars still take precedence at runtime. */
+export async function saveIntegrations(values: {
+  emailFrom: string;
+  emailTo: string;
+  resendApiKey: string;
+  cloudinaryFolder: string;
+  mediaTrashTtlDays: string;
+}) {
+  await requireAdmin();
+  const { RESEND_KEYS, MEDIA_KEYS } = await import("@/lib/integration-config");
+  const writes: Record<string, string> = {
+    [RESEND_KEYS.from]: values.emailFrom.trim(),
+    [RESEND_KEYS.to]: values.emailTo.trim(),
+    [MEDIA_KEYS.folder]: values.cloudinaryFolder.trim(),
+    [MEDIA_KEYS.trashTtl]: values.mediaTrashTtlDays.trim(),
+  };
+  if (values.resendApiKey.trim()) writes[RESEND_KEYS.apiKey] = values.resendApiKey.trim();
+  for (const [key, value] of Object.entries(writes)) {
+    await db
+      .insert(settings)
+      .values({ key, value })
+      .onConflictDoUpdate({ target: settings.key, set: { value } });
+  }
+  revalidatePath("/admin/settings");
+  return { ok: true as const };
+}
+
 /* ============================== Users ============================== */
 
 export async function createUser(data: { email: string; name: string; password: string; role: "admin" | "editor" }) {
