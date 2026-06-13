@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { listMedia } from "@/app/admin/actions";
 import { useUpload } from "@/lib/useUpload";
 import { useIntegrations } from "@/components/admin/IntegrationsContext";
+import { CloudinaryNotice } from "@/components/admin/CloudinaryNotice";
 
 type MediaItem = {
   id: string;
@@ -88,11 +89,7 @@ export function MediaPicker({ onSelect, onClose }: { onSelect: (url: string) => 
           </button>
         </div>
 
-        {!cloudinary && (
-          <p className="mb-3 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--ad-bg)", color: "var(--ad-muted)" }}>
-            Device uploads need Cloudinary. Add your credentials in <strong>Settings</strong> to upload and build a media library, or paste an image URL above.
-          </p>
-        )}
+        <CloudinaryNotice className="mb-3" />
 
         {error && <p className="mb-3 text-sm" style={{ color: "var(--ad-danger)" }}>{error}</p>}
 

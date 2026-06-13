@@ -5,6 +5,7 @@ import Link from "next/link";
 import { savePost, trashPost, createCategory } from "@/app/admin/actions";
 import { RichTextField } from "@/components/admin/editor/RichTextField";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { CloudinaryNotice } from "@/components/admin/CloudinaryNotice";
 
 export type PostData = {
   id: string;
@@ -259,6 +260,7 @@ export function PostEditor({ initial, categories: initialCategories }: { initial
                   </button>
                 )}
               </div>
+              <CloudinaryNotice className="mb-2" />
               <div className="ad-field">
                 <label className="ad-label">Alt text</label>
                 <input className="ad-input" value={post.heroImageAlt ?? ""} onChange={(e) => update({ heroImageAlt: e.target.value || null })} />

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { changeOwnPassword, updateOwnProfileImage } from "@/app/admin/actions";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { CloudinaryNotice } from "@/components/admin/CloudinaryNotice";
 
 export function AccountManager({
   name,
@@ -95,9 +96,10 @@ export function AccountManager({
               <label className="ad-label">Email</label>
               <input className="ad-input" value={email} disabled />
             </div>
-            <p className="text-xs" style={{ color: "var(--ad-muted)" }}>
+            <p className="mb-2 text-xs" style={{ color: "var(--ad-muted)" }}>
               Signed in as {role}.
             </p>
+            <CloudinaryNotice />
           </div>
         </div>
       </section>

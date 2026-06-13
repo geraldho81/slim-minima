@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { updateMediaAlt, trashMedia, trashMediaItems } from "@/app/admin/actions";
 import { useUpload } from "@/lib/useUpload";
+import { CloudinaryNotice } from "@/components/admin/CloudinaryNotice";
 
 type MediaItem = {
   id: string;
@@ -121,19 +122,7 @@ export function MediaLibrary({
       </div>
 
       {!cloudinaryConfigured ? (
-        <div className="mb-4 rounded-xl p-5" style={{ background: "#fff7ed" }}>
-          <p className="mb-1 text-sm font-semibold" style={{ color: "#9a3412" }}>
-            Cloudinary is not connected
-          </p>
-          <p className="text-sm" style={{ color: "#9a3412" }}>
-            The media library needs a Cloudinary account to store and serve files. Add your Cloud name,
-            API key and API secret in{" "}
-            <Link href="/admin/settings" className="underline font-medium">
-              Settings
-            </Link>{" "}
-            (or set the <code>CLOUDINARY_*</code> environment variables). It is free to start at cloudinary.com.
-          </p>
-        </div>
+        <CloudinaryNotice variant="media" className="mb-4" />
       ) : (
         <p className="mb-4 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--ad-accent-soft)", color: "var(--ad-muted)" }}>
           Note: Cloudinary blocks delivery of PDF and ZIP files by default. To allow them, open your Cloudinary console and go to

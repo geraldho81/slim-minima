@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { FieldSpec } from "@/blocks/types";
 import { MediaPicker } from "@/components/admin/MediaPicker";
+import { CloudinaryNotice } from "@/components/admin/CloudinaryNotice";
 import { RichTextField } from "@/components/admin/editor/RichTextField";
 
 /** Renders a settings form from a block's declarative field specs. */
@@ -122,6 +123,7 @@ function ImageField({ label, value, onChange }: { label: string; value: string; 
           </button>
         )}
       </div>
+      <CloudinaryNotice className="mt-1.5" />
       {open && <MediaPicker onSelect={onChange} onClose={() => setOpen(false)} />}
     </div>
   );
