@@ -23,7 +23,7 @@ export function AdminSidebar({ userName, role }: { userName: string; role: "admi
   return (
     <aside className="sticky top-0 flex h-screen w-52 shrink-0 flex-col px-3 py-5">
       <Link href="/admin" className="mb-7 flex items-center gap-2.5 px-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ background: "var(--ad-accent)" }}>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ background: "#14110e" }}>
           <svg width="17" height="17" viewBox="0 0 40 40" fill="none">
             <path d="M11 29V13M20 29V13M29 29V13M11 13H29" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

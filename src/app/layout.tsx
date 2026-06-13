@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Manrope, JetBrains_Mono } from "next/font/google";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const sans = Manrope({
+const sans = Hanken_Grotesk({
   variable: "--font-sans",
   subsets: ["latin"],
 });

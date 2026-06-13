@@ -119,7 +119,7 @@ export function SettingsForm({ initial }: { initial: Values }) {
         + Add social link
       </button>
 
-      <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--ad-bg)" }}>
+      <div className="mt-6 border-t pt-5" style={{ borderColor: "var(--ad-line)" }}>
         <h2 className="mb-1 text-sm font-bold tracking-tight">Tracking</h2>
         <p className="mb-3 text-xs" style={{ color: "var(--ad-muted)" }}>
           Paste your Google Tag Manager container ID and the snippet is added to every public page
