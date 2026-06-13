@@ -15,7 +15,7 @@ import { listCloudinaryMedia, deleteCloudinaryMedia, setCloudinaryAlt } from "@/
 import { CACHE_TAGS } from "@/lib/queries";
 import { slugify } from "@/lib/content";
 import { pingPagesIndexNow, pingPostsIndexNow } from "@/lib/indexnow";
-import { regenerateMcpToken } from "@/lib/mcp/token";
+import { regenerateMcpToken, revokeMcpToken } from "@/lib/mcp/token";
 
 function bumpPages() {
   revalidateTag(CACHE_TAGS.pages, "max");
@@ -674,12 +674,18 @@ export async function deleteApiKey(id: string) {
 
 /* ============================== MCP connector ============================== */
 
-// The connector token is auto-provisioned (see src/lib/mcp/token.ts); this only
-// rotates it when an admin asks for a fresh one. The old token stops working
-// immediately.
+// The connector token is auto-provisioned (see src/lib/mcp/token.ts). These
+// actions rotate it, turn it off, or turn it back on. rotate doubles as
+// "enable" since it clears the disabled flag.
 export async function rotateMcpToken() {
   await requireAdmin();
   const token = await regenerateMcpToken();
   revalidatePath("/admin/settings");
   return token;
+}
+
+export async function revokeMcpTokenAction() {
+  await requireAdmin();
+  await revokeMcpToken();
+  revalidatePath("/admin/settings");
 }

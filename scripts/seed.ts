@@ -163,7 +163,7 @@ async function main() {
   /* ---------- MCP connector token ---------- */
   const { getOrCreateMcpToken } = await import("../src/lib/mcp/token");
   const mcpToken = await getOrCreateMcpToken();
-  console.log(`MCP connector token (Admin -> Settings -> AI connector): ${mcpToken}`);
+  if (mcpToken) console.log(`MCP connector token (Admin -> Settings -> AI connector): ${mcpToken}`);
 
   console.log("Seed complete.");
 }

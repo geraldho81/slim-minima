@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { rotateMcpToken } from "@/app/admin/actions";
+import { rotateMcpToken, revokeMcpTokenAction } from "@/app/admin/actions";
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -36,10 +36,10 @@ export function McpConnector({
   cloudinaryConnected,
 }: {
   serverUrl: string;
-  token: string;
+  token: string | null;
   cloudinaryConnected: boolean;
 }) {
-  const [current, setCurrent] = useState(token);
+  const [current, setCurrent] = useState<string | null>(token);
   const [busy, setBusy] = useState(false);
 
   return (
@@ -48,35 +48,75 @@ export function McpConnector({
       <p className="mb-4 text-xs" style={{ color: "var(--ad-muted)" }}>
         Connect ChatGPT, Claude, Perplexity or Grok to this site. The assistant can read your pages and posts and write blog
         posts (create and update). It cannot edit pages or delete anything. Images are added through your Cloudinary when
-        connected, or by URL otherwise. Your connector is ready - just copy the details below into your AI client.
+        connected, or by URL otherwise.
       </p>
 
-      <CopyField label="MCP server URL" value={serverUrl} />
-      <CopyField label="Token (paste in the connector's API key / token field)" value={current} />
-      <CopyField label="One-line URL (for clients with only a URL field - token included)" value={`${serverUrl}/${current}`} />
+      {current ? (
+        <>
+          <CopyField label="MCP server URL" value={serverUrl} />
+          <CopyField label="Token (paste in the connector's API key / token field)" value={current} />
+          <CopyField label="One-line URL (for clients with only a URL field - token included)" value={`${serverUrl}/${current}`} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <button
-          className="ad-btn ad-btn-danger"
-          disabled={busy}
-          onClick={async () => {
-            if (!confirm("Regenerate the connector token? Any AI client using the current token will stop working until you update it.")) return;
-            setBusy(true);
-            try {
-              setCurrent(await rotateMcpToken());
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Regenerate token
-        </button>
-        <span className="text-xs" style={{ color: "var(--ad-muted)" }}>
-          Rotates the token. The old one stops working immediately.
-        </span>
-      </div>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <button
+              className="ad-btn"
+              disabled={busy}
+              onClick={async () => {
+                if (!confirm("Regenerate the connector token? Any AI client using the current token will stop working until you update it.")) return;
+                setBusy(true);
+                try {
+                  setCurrent(await rotateMcpToken());
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Regenerate token
+            </button>
+            <button
+              className="ad-btn ad-btn-danger"
+              disabled={busy}
+              onClick={async () => {
+                if (!confirm("Revoke the connector? It turns off completely and any AI client using it loses access until you turn it back on.")) return;
+                setBusy(true);
+                try {
+                  await revokeMcpTokenAction();
+                  setCurrent(null);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Revoke
+            </button>
+            <span className="text-xs" style={{ color: "var(--ad-muted)" }}>
+              Regenerate rotates the token; Revoke turns the connector off.
+            </span>
+          </div>
+        </>
+      ) : (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <button
+            className="ad-btn ad-btn-primary"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                setCurrent(await rotateMcpToken());
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Turn on connector
+          </button>
+          <span className="text-xs" style={{ color: "var(--ad-muted)" }}>
+            The connector is off. Turn it on to generate a token and reconnect your AI clients.
+          </span>
+        </div>
+      )}
 
-      {!cloudinaryConnected && (
+      {current && !cloudinaryConnected && (
         <p className="mb-4 text-xs" style={{ color: "var(--ad-muted)" }}>
           Cloudinary is not connected, so the assistant will use image URLs directly. Connect Cloudinary above to have it
           upload images into your own media library instead.
