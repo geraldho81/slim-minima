@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import type { Block } from "@/blocks/types";
 import { registry, blockList } from "@/blocks/registry";
@@ -30,15 +30,29 @@ export type PageData = {
   metaDescription: string | null;
   ogImage: string | null;
   noindex: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type SaveState = "saved" | "dirty" | "saving" | "error";
+type Viewport = "desktop" | "tablet" | "mobile";
+type InspectorTab = "page" | "settings" | "seo";
+
+const VIEWPORT_WIDTH: Record<Viewport, number> = { desktop: 1100, tablet: 768, mobile: 390 };
+
+const STATUS_CHIP: Record<PageData["status"], { label: string; className: string }> = {
+  draft: { label: "Draft", className: "ad-chip-draft" },
+  published: { label: "Published", className: "ad-chip-published" },
+  scheduled: { label: "Scheduled", className: "ad-chip-scheduled" },
+};
 
 export function PageEditor({ initial }: { initial: PageData }) {
   const [page, setPage] = useState(initial);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [viewport, setViewport] = useState<Viewport>("desktop");
+  const [tab, setTab] = useState<InspectorTab>("page");
 
   const pageRef = useRef(page);
   pageRef.current = page;
@@ -106,14 +120,15 @@ export function PageEditor({ initial }: { initial: PageData }) {
     setSelectedId(block.id);
   }
 
-  async function handlePublishClick() {
+  async function handleSaveClick() {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (page.status === "published") {
-      await doSave();
-    } else {
-      setPage((p) => ({ ...p, status: "published" }));
-      await doSave({ status: "published" });
-    }
+    await doSave();
+  }
+
+  async function setStatus(status: PageData["status"]) {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setPage((p) => ({ ...p, status }));
+    await doSave({ status });
   }
 
   const selectedBlock = selectedId ? findBlock(page.blocks, selectedId) : null;
@@ -123,29 +138,50 @@ export function PageEditor({ initial }: { initial: PageData }) {
     saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving..." : saveState === "dirty" ? "Unsaved changes" : "Save failed - retrying on next change";
 
   const previewHref = `/${page.slug === "home" ? "" : page.slug}?preview=1`;
+  const chip = STATUS_CHIP[page.status];
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "var(--ad-bg)", color: "var(--ad-text)" }}>
       {/* Top bar */}
-      <header className="flex h-14 shrink-0 items-center gap-3 bg-white px-4">
+      <header className="flex h-16 shrink-0 items-center gap-4 bg-white px-4">
         <Link href="/admin/pages" className="ad-btn ad-btn-soft" style={{ padding: "0.4rem 0.7rem" }}>
           ←
         </Link>
-        <input
-          className="min-w-0 flex-1 bg-transparent text-[15px] font-bold tracking-tight outline-none"
-          value={page.title}
-          onChange={(e) => update({ title: e.target.value })}
-          placeholder="Page title"
-        />
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <div className="flex items-center gap-2.5">
+            <input
+              className="min-w-0 bg-transparent text-[17px] font-bold tracking-tight outline-none"
+              value={page.title}
+              onChange={(e) => update({ title: e.target.value })}
+              placeholder="Page title"
+              size={Math.max(page.title.length, 4)}
+            />
+            <span className={`ad-chip ${chip.className}`}>{chip.label}</span>
+          </div>
+          <span className="text-xs" style={{ color: "var(--ad-muted)" }}>/{page.slug === "home" ? "" : page.slug}</span>
+        </div>
+
+        <ViewportToggle viewport={viewport} setViewport={setViewport} />
+        <button
+          title="Page settings"
+          className="ad-icon-btn"
+          onClick={() => { setSelectedId(null); setTab("page"); }}
+        >
+          <GearIcon />
+        </button>
+
         <span className="shrink-0 text-xs" style={{ color: saveState === "error" ? "var(--ad-danger)" : "var(--ad-muted)" }}>
           {saveLabel}
         </span>
         <a href={previewHref} target="_blank" className="ad-btn ad-btn-soft">
           Preview
         </a>
-        <button className="ad-btn ad-btn-primary" onClick={handlePublishClick} disabled={saveState === "saving"}>
-          {page.status === "published" ? "Update" : "Publish"}
-        </button>
+        <SaveButton
+          status={page.status}
+          saving={saveState === "saving"}
+          onSave={handleSaveClick}
+          onSetStatus={setStatus}
+        />
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -171,7 +207,10 @@ export function PageEditor({ initial }: { initial: PageData }) {
 
         {/* Canvas */}
         <div className="min-w-0 flex-1 overflow-y-auto py-4 pr-1">
-          <div className="mx-auto overflow-hidden rounded-xl shadow-[0_2px_24px_rgba(0,0,0,0.07)]" style={{ maxWidth: "1100px", background: "var(--bg)" }}>
+          <div
+            className="mx-auto overflow-hidden rounded-xl shadow-[0_2px_24px_rgba(0,0,0,0.07)] transition-[max-width] duration-300"
+            style={{ maxWidth: `${VIEWPORT_WIDTH[viewport]}px`, background: "var(--bg)" }}
+          >
             <Canvas
               blocks={page.blocks}
               selectedId={selectedId}
@@ -187,7 +226,7 @@ export function PageEditor({ initial }: { initial: PageData }) {
           </div>
         </div>
 
-        {/* Settings panel */}
+        {/* Inspector panel */}
         <aside className="w-80 shrink-0 overflow-y-auto bg-white p-4">
           {selectedBlock && selectedDef ? (
             <>
@@ -204,9 +243,11 @@ export function PageEditor({ initial }: { initial: PageData }) {
               />
             </>
           ) : (
-            <PageSettings
+            <PageInspector
               page={page}
               update={update}
+              tab={tab}
+              setTab={setTab}
               onShowRevisions={() => setRevisionsOpen(true)}
             />
           )}
@@ -228,88 +269,195 @@ export function PageEditor({ initial }: { initial: PageData }) {
   );
 }
 
-function PageSettings({
+function GearIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 8.4a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.2.62.78 1 1.42 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </svg>
+  );
+}
+
+function ViewportToggle({ viewport, setViewport }: { viewport: Viewport; setViewport: (v: Viewport) => void }) {
+  const icons: Record<Viewport, ReactNode> = {
+    desktop: <><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></>,
+    tablet: <><rect x="5" y="2" width="14" height="20" rx="2" /><path d="M12 18h.01" /></>,
+    mobile: <><rect x="7" y="2" width="10" height="20" rx="2" /><path d="M12 18h.01" /></>,
+  };
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg p-0.5" style={{ background: "var(--ad-bg)" }}>
+      {(Object.keys(icons) as Viewport[]).map((v) => (
+        <button
+          key={v}
+          title={v}
+          className="ad-vp-btn"
+          data-active={viewport === v}
+          onClick={() => setViewport(v)}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {icons[v]}
+          </svg>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SaveButton({
+  status,
+  saving,
+  onSave,
+  onSetStatus,
+}: {
+  status: PageData["status"];
+  saving: boolean;
+  onSave: () => void;
+  onSetStatus: (status: PageData["status"]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative flex">
+      <button className="ad-btn ad-btn-primary" style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }} onClick={onSave} disabled={saving}>
+        Save
+      </button>
+      <button
+        className="ad-btn ad-btn-primary"
+        style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, padding: "0 0.5rem", marginLeft: 1 }}
+        onClick={() => setOpen((v) => !v)}
+        disabled={saving}
+      >
+        ▾
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-lg bg-white p-1 shadow-xl" style={{ border: "1px solid var(--ad-line)" }}>
+            {status !== "published" ? (
+              <button className="block w-full rounded-md px-3 py-2 text-left text-xs font-semibold hover:bg-[var(--ad-bg)]" onClick={() => { onSetStatus("published"); setOpen(false); }}>
+                Publish now
+              </button>
+            ) : (
+              <button className="block w-full rounded-md px-3 py-2 text-left text-xs font-semibold hover:bg-[var(--ad-bg)]" onClick={() => { onSetStatus("draft"); setOpen(false); }}>
+                Unpublish (to draft)
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function PageInspector({
   page,
   update,
+  tab,
+  setTab,
   onShowRevisions,
 }: {
   page: PageData;
   update: (partial: Partial<PageData>) => void;
+  tab: InspectorTab;
+  setTab: (t: InspectorTab) => void;
   onShowRevisions: () => void;
 }) {
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+
   return (
     <>
-      <h2 className="mb-4 text-sm font-bold tracking-tight">Page settings</h2>
-
-      <div className="ad-field">
-        <label className="ad-label">Slug</label>
-        <div className="flex items-center gap-1">
-          <span className="text-sm" style={{ color: "var(--ad-muted)" }}>/</span>
-          <input className="ad-input" value={page.slug} onChange={(e) => update({ slug: e.target.value })} />
-        </div>
-        <p className="mt-1 text-[11px]" style={{ color: "var(--ad-muted)" }}>
-          The slug &quot;home&quot; is served at the site root.
-        </p>
+      <div className="mb-4 flex gap-4" style={{ borderBottom: "1px solid var(--ad-line)" }}>
+        {(["page", "settings", "seo"] as InspectorTab[]).map((t) => (
+          <button key={t} className={`ad-tab ${tab === t ? "ad-tab-active" : ""}`} onClick={() => setTab(t)}>
+            {t === "page" ? "Page" : t === "settings" ? "Settings" : "SEO"}
+          </button>
+        ))}
       </div>
 
-      <div className="ad-field">
-        <label className="ad-label">Status</label>
-        <select
-          className="ad-select"
-          value={page.status}
-          onChange={(e) => update({ status: e.target.value as PageData["status"] })}
-        >
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
-          <option value="scheduled">Scheduled</option>
-        </select>
-      </div>
+      {tab === "page" && (
+        <>
+          <div className="ad-field">
+            <label className="ad-label">Status</label>
+            <select
+              className="ad-select"
+              value={page.status}
+              onChange={(e) => update({ status: e.target.value as PageData["status"] })}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="scheduled">Scheduled</option>
+            </select>
+          </div>
 
-      {page.status === "scheduled" && (
-        <div className="ad-field">
-          <label className="ad-label">Go live at</label>
-          <input
-            className="ad-input"
-            type="datetime-local"
-            value={page.publishAt ? page.publishAt.slice(0, 16) : ""}
-            onChange={(e) => update({ publishAt: e.target.value ? new Date(e.target.value).toISOString() : null })}
-          />
-        </div>
+          {page.status === "scheduled" && (
+            <div className="ad-field">
+              <label className="ad-label">Go live at</label>
+              <input
+                className="ad-input"
+                type="datetime-local"
+                value={page.publishAt ? page.publishAt.slice(0, 16) : ""}
+                onChange={(e) => update({ publishAt: e.target.value ? new Date(e.target.value).toISOString() : null })}
+              />
+            </div>
+          )}
+
+          <div className="ad-field">
+            <label className="ad-label">Slug</label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm" style={{ color: "var(--ad-muted)" }}>/</span>
+              <input className="ad-input" value={page.slug} onChange={(e) => update({ slug: e.target.value })} />
+            </div>
+            <p className="mt-1 text-[11px]" style={{ color: "var(--ad-muted)" }}>
+              The slug &quot;home&quot; is served at the site root.
+            </p>
+          </div>
+
+          <div className="mt-5 flex justify-between border-t pt-4 text-xs" style={{ borderColor: "var(--ad-line)" }}>
+            <span style={{ color: "var(--ad-muted)" }}>Created</span>
+            <span className="font-medium">{fmt(page.createdAt)}</span>
+          </div>
+          <div className="mt-1.5 flex justify-between text-xs">
+            <span style={{ color: "var(--ad-muted)" }}>Updated</span>
+            <span className="font-medium">{fmt(page.updatedAt)}</span>
+          </div>
+        </>
       )}
 
-      <details className="mb-3 mt-5" open>
-        <summary className="mb-2 cursor-pointer text-[11px] font-bold uppercase tracking-wider" style={{ color: "var(--ad-muted)" }}>
-          SEO
-        </summary>
-        <div className="ad-field">
-          <label className="ad-label">Meta title</label>
-          <input className="ad-input" value={page.metaTitle ?? ""} onChange={(e) => update({ metaTitle: e.target.value || null })} />
-        </div>
-        <div className="ad-field">
-          <label className="ad-label">Meta description</label>
-          <textarea className="ad-textarea" rows={3} value={page.metaDescription ?? ""} onChange={(e) => update({ metaDescription: e.target.value || null })} />
-        </div>
-        <div className="ad-field">
-          <label className="ad-label">Social image URL</label>
-          <input className="ad-input" value={page.ogImage ?? ""} onChange={(e) => update({ ogImage: e.target.value || null })} placeholder="https://..." />
-        </div>
-        <label className="mb-3 flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={page.noindex} onChange={(e) => update({ noindex: e.target.checked })} />
-          Hide from search engines (noindex)
-        </label>
-      </details>
+      {tab === "settings" && (
+        <>
+          <button className="ad-btn ad-btn-soft mb-2 w-full" onClick={onShowRevisions}>
+            Revision history
+          </button>
+          <button
+            className="ad-btn ad-btn-danger w-full"
+            title="Reversible - restore it from the Trash tab on the pages list"
+            onClick={() => trashPage(page.id)}
+          >
+            Move to trash
+          </button>
+        </>
+      )}
 
-      <button className="ad-btn ad-btn-soft mb-2 w-full" onClick={onShowRevisions}>
-        Revision history
-      </button>
-
-      <button
-        className="ad-btn ad-btn-danger w-full"
-        title="Reversible - restore it from the Trash tab on the pages list"
-        onClick={() => trashPage(page.id)}
-      >
-        Move to trash
-      </button>
+      {tab === "seo" && (
+        <>
+          <div className="ad-field">
+            <label className="ad-label">Meta title</label>
+            <input className="ad-input" value={page.metaTitle ?? ""} onChange={(e) => update({ metaTitle: e.target.value || null })} />
+          </div>
+          <div className="ad-field">
+            <label className="ad-label">Meta description</label>
+            <textarea className="ad-textarea" rows={3} value={page.metaDescription ?? ""} onChange={(e) => update({ metaDescription: e.target.value || null })} />
+          </div>
+          <div className="ad-field">
+            <label className="ad-label">Social image URL</label>
+            <input className="ad-input" value={page.ogImage ?? ""} onChange={(e) => update({ ogImage: e.target.value || null })} placeholder="https://..." />
+          </div>
+          <label className="mb-3 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={page.noindex} onChange={(e) => update({ noindex: e.target.checked })} />
+            Hide from search engines (noindex)
+          </label>
+        </>
+      )}
     </>
   );
 }

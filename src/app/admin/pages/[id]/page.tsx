@@ -22,6 +22,8 @@ export default async function PageEditorRoute(props: { params: Promise<{ id: str
         metaDescription: page.metaDescription,
         ogImage: page.ogImage,
         noindex: page.noindex,
+        createdAt: page.createdAt.toISOString(),
+        updatedAt: page.updatedAt.toISOString(),
       }}
     />
   );

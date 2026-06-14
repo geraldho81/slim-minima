@@ -154,20 +154,50 @@ function CanvasBlock({
         onSelect(block.id);
       }}
     >
-      {selected && (
+      <div className="canvas-block-header" onClick={(e) => e.stopPropagation()}>
+        <span className="canvas-block-label">
+          {dragHandle}
+          <span aria-hidden className="canvas-block-icon">{def.icon}</span>
+          {def.label}
+        </span>
+        <BlockMenu
+          canMoveUp={canMoveUp}
+          canMoveDown={canMoveDown}
+          onAction={(a) => onAction(block.id, a)}
+        />
+      </div>
+      <Component {...blockProps} ctx={{ zones }} />
+    </div>
+  );
+}
+
+function BlockMenu({
+  canMoveUp,
+  canMoveDown,
+  onAction,
+}: {
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onAction: (action: BlockAction) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="canvas-block-menu-wrap">
+      <button title="Block actions" className="canvas-block-menu-btn" onClick={() => setOpen((v) => !v)}>
+        ⋮
+      </button>
+      {open && (
         <>
-          <span className="canvas-block-label">{def.label}</span>
-          <span className="canvas-block-toolbar" onClick={(e) => e.stopPropagation()}>
-            {dragHandle}
-            <button title="Move up" disabled={!canMoveUp} style={{ opacity: canMoveUp ? 1 : 0.35 }} onClick={() => onAction(block.id, "up")}>↑</button>
-            <button title="Move down" disabled={!canMoveDown} style={{ opacity: canMoveDown ? 1 : 0.35 }} onClick={() => onAction(block.id, "down")}>↓</button>
-            <button title="Duplicate" onClick={() => onAction(block.id, "duplicate")}>⧉</button>
-            <button title="Delete" onClick={() => onAction(block.id, "delete")}>✕</button>
+          <span className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <span className="canvas-block-menu">
+            <button disabled={!canMoveUp} onClick={() => { onAction("up"); setOpen(false); }}>↑ Move up</button>
+            <button disabled={!canMoveDown} onClick={() => { onAction("down"); setOpen(false); }}>↓ Move down</button>
+            <button onClick={() => { onAction("duplicate"); setOpen(false); }}>⧉ Duplicate</button>
+            <button className="canvas-block-menu-danger" onClick={() => { onAction("delete"); setOpen(false); }}>✕ Delete</button>
           </span>
         </>
       )}
-      <Component {...blockProps} ctx={{ zones }} />
-    </div>
+    </span>
   );
 }
 

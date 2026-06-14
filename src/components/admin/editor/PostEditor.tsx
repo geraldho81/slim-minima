@@ -28,6 +28,57 @@ type CategoryOption = { id: string; name: string };
 
 type SaveState = "saved" | "dirty" | "saving" | "error";
 
+const STATUS_CHIP: Record<PostData["status"], { label: string; className: string }> = {
+  draft: { label: "Draft", className: "ad-chip-draft" },
+  published: { label: "Published", className: "ad-chip-published" },
+  scheduled: { label: "Scheduled", className: "ad-chip-scheduled" },
+};
+
+function SaveButton({
+  status,
+  saving,
+  onSave,
+  onSetStatus,
+}: {
+  status: PostData["status"];
+  saving: boolean;
+  onSave: () => void;
+  onSetStatus: (status: PostData["status"]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative flex">
+      <button className="ad-btn ad-btn-primary" style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }} onClick={onSave} disabled={saving}>
+        Save
+      </button>
+      <button
+        className="ad-btn ad-btn-primary"
+        style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, padding: "0 0.5rem", marginLeft: 1 }}
+        onClick={() => setOpen((v) => !v)}
+        disabled={saving}
+      >
+        ▾
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-lg bg-white p-1 shadow-xl" style={{ border: "1px solid var(--ad-line)" }}>
+            {status !== "published" ? (
+              <button className="block w-full rounded-md px-3 py-2 text-left text-xs font-semibold hover:bg-[var(--ad-bg)]" onClick={() => { onSetStatus("published"); setOpen(false); }}>
+                Publish now
+              </button>
+            ) : (
+              <button className="block w-full rounded-md px-3 py-2 text-left text-xs font-semibold hover:bg-[var(--ad-bg)]" onClick={() => { onSetStatus("draft"); setOpen(false); }}>
+                Unpublish (to draft)
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function PostEditor({ initial, categories: initialCategories }: { initial: PostData; categories: CategoryOption[] }) {
   const [post, setPost] = useState(initial);
   const [categories, setCategories] = useState(initialCategories);
@@ -77,38 +128,47 @@ export function PostEditor({ initial, categories: initialCategories }: { initial
     [doSave]
   );
 
-  async function handlePublishClick() {
+  async function handleSaveClick() {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (post.status === "published") {
-      await doSave();
-    } else {
-      setPost((p) => ({ ...p, status: "published" }));
-      await doSave({ status: "published" });
-    }
+    await doSave();
   }
+
+  async function setStatus(status: PostData["status"]) {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setPost((p) => ({ ...p, status }));
+    await doSave({ status });
+  }
+
+  const chip = STATUS_CHIP[post.status];
 
   const saveLabel =
     saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving..." : saveState === "dirty" ? "Unsaved changes" : "Save failed - retrying on next change";
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "var(--ad-bg)", color: "var(--ad-text)" }}>
-      <header className="flex h-14 shrink-0 items-center gap-3 bg-white px-4">
+      <header className="flex h-16 shrink-0 items-center gap-3 bg-white px-4">
         <Link href="/admin/posts" className="ad-btn ad-btn-soft" style={{ padding: "0.4rem 0.7rem" }}>
           ←
         </Link>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-bold tracking-tight">{post.title || "Untitled post"}</span>
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <div className="flex items-center gap-2.5">
+            <span className="min-w-0 truncate text-[17px] font-bold tracking-tight">{post.title || "Untitled post"}</span>
+            <span className={`ad-chip ${chip.className}`}>{chip.label}</span>
+          </div>
+          <span className="text-xs" style={{ color: "var(--ad-muted)" }}>/blog/{post.slug}</span>
+        </div>
         <span className="shrink-0 text-xs" style={{ color: saveState === "error" ? "var(--ad-danger)" : "var(--ad-muted)" }}>
           {saveLabel}
         </span>
         <a href={`/blog/${post.slug}?preview=1`} target="_blank" className="ad-btn ad-btn-soft">
           Preview
         </a>
-        <button className="ad-btn ad-btn-soft" onClick={() => setSidebarOpen((v) => !v)} title="Toggle post settings">
-          {sidebarOpen ? "Hide settings" : "Settings"}
+        <button className="ad-icon-btn" onClick={() => setSidebarOpen((v) => !v)} title="Toggle post settings">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" /><path d="M15 3v18" />
+          </svg>
         </button>
-        <button className="ad-btn ad-btn-primary" onClick={handlePublishClick} disabled={saveState === "saving"}>
-          {post.status === "published" ? "Update" : "Publish"}
-        </button>
+        <SaveButton status={post.status} saving={saveState === "saving"} onSave={handleSaveClick} onSetStatus={setStatus} />
       </header>
 
       <div className="flex min-h-0 flex-1">
