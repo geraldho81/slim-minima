@@ -42,6 +42,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             ))}
           </nav>
         </div>
+        <p style={{ fontSize: "0.75rem", color: "var(--cms-muted, #888)", marginTop: "1rem", textAlign: "center" }}>
+          Built on <a href="https://slimminima.xyz" target="_blank" rel="noopener noreferrer" style={{ color: "inherit" }}>Slim Minima</a>
+        </p>
       </footer>
     </>
   );
