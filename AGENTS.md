@@ -158,7 +158,7 @@ password printed once); override with `SEED_ADMIN_EMAIL/PASSWORD/NAME` in
 - **media** - the library reads live from Cloudinary; the `media` table records uploads.
 - **media_trash** - soft-deleted media. The Cloudinary asset stays put until the daily cron purges rows older than `MEDIA_TRASH_TTL_DAYS`, then deletes from Cloudinary. See "Media trash bin".
 - **menus** - `header` and `footer`, items `{label, href}`.
-- **settings** - key/value: `siteName`, `tagline`, `logoUrl`, `defaultOgImage`, `footerText`, `social`, `gtmId`. `gtmId` injects the Google Tag Manager snippet on public pages (never in /admin). Put GA4/Pixel/etc inside GTM, not the CMS.
+- **settings** - key/value: `siteName`, `tagline`, `logoUrl`, `defaultOgImage`, `footerText`, `social`, `gtmId`, plus `contactForms` (array of reusable contact form definitions - see "Contact forms"). `gtmId` injects the Google Tag Manager snippet on public pages (never in /admin). Put GA4/Pixel/etc inside GTM, not the CMS.
 - **users** - email/password (bcrypt), role `admin`/`editor`.
 - **contact_submissions** - `formName`, mirrored `name`/`email`/`message`, and `data` (jsonb: every submitted field). Written by `/api/contact`.
 - **page_revisions** - automatic snapshots (max every 5 min, last 20), restorable.
@@ -240,16 +240,32 @@ Rules for `Render`:
 - Style with `cms-*` classes and CSS variables from `src/app/globals.css`.
 - Never put a `border` or `outline` on card-style elements - cards are defined by background alone.
 
-## Contact form
+## Contact forms
 
-`contact-form` is configurable from the editor: the marketer defines their own
-fields (label, key, type text/email/tel/textarea/dropdown, required, full
-width), sets the **receiver email**, and chooses what happens after submit -
-**show an inline thank-you message on the same page** or **redirect to a
-thank-you page**. Submissions POST to `/api/contact`, are stored in
-`contact_submissions` (always), and emailed via Resend if `RESEND_API_KEY` is
-set (to the per-form receiver, falling back to `EMAIL_TO`). A honeypot field
-blocks bots.
+Marketers build **reusable forms** in the Contacts admin area
+(`/admin/contacts`) and drop them on any page by picking one from the
+`contact-form` block's **Form** dropdown - define a form once, reuse it
+everywhere, edit it in one place and every page updates. A form owns its fields
+(label, key, type text/email/tel/textarea/dropdown, required, full width), the
+**receiver email**, the submit label, and what happens after submit (**inline
+thank-you message** or **redirect to a thank-you page**). The block itself only
+carries the surrounding presentation copy (eyebrow, heading, intro text).
+
+Forms are stored as an array under the `contactForms` **settings key** - there
+is no dedicated table, so this needs no migration and works on any install with
+zero setup. The block loads the chosen form server-side via `getData`
+(`getContactFormById` in `src/lib/queries.ts`) and signs the receiver; the
+editor canvas can't run `getData`, so it loads the form client-side for preview
+(`ContactFormBlockPreview`). Older `contact-form` blocks that configured fields
+inline (no `formId`) still render from their own props - the block falls back to
+them, so nothing breaks.
+
+Submissions POST to `/api/contact`, are stored in `contact_submissions`
+(always, even with no email configured), and emailed via Resend if
+`RESEND_API_KEY` is set (to the form's receiver, falling back to `EMAIL_TO`). A
+honeypot field blocks bots. Read collected leads in the Contacts submissions
+inbox (`/admin/contacts/submissions`), grouped and filterable by form
+(matched on the form's submissions label = `contact_submissions.form_name`).
 
 ## Media trash bin
 
@@ -343,6 +359,8 @@ src/app/(site)/[[...slug]]/page.tsx       public page route
 src/app/(site)/blog/                      blog index + post page
 src/app/admin/actions.ts                  all admin server actions (incl. media trash)
 src/app/admin/media/trash/page.tsx        media trash view
+src/app/admin/contacts/                    reusable forms admin + submissions inbox
+src/blocks/contact-form/index.tsx         contact-form block (form picker + legacy fallback)
 src/app/api/contact/route.ts              contact form handler
 src/app/api/cron/empty-trash/route.ts     daily trash purge
 scripts/cms.ts                            agent CLI
