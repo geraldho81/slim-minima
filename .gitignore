@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# personal local Claude Code instructions (AGENTS.md is the shared agent guide)
+CLAUDE.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

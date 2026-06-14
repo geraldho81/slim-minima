@@ -31,8 +31,14 @@ Before any git work, run `git remote -v`. If `origin` still contains
 either `git remote set-url origin <their-repo>` or re-init git
 (`rm -rf .git && git init`). Only commit and push the site once `origin` is the
 user's own repo. If you are not sure which repo you are on, do not push - ask.
-(The only time pushing to the Slim Minima remote is correct is when you are
-developing the framework itself, not building a site. See `CLAUDE.md`.)
+
+## Vercel deployments - DO NOT
+
+**Never deploy to Vercel unless the user explicitly says "deploy to Vercel" or "run vercel deploy."**
+Do not use Vercel MCP tools or the Vercel CLI to trigger a deployment proactively.
+`vercel.json` existing in this repo does not mean you should deploy - it only configures cron jobs.
+The deployment decision always belongs to the user. This applies in all contexts: building a site,
+developing the framework, or anything else. Even if the build is clean. Even if you have the tools.
 
 ## Stack
 
