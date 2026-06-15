@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -60,10 +60,12 @@ const STATUS_CHIP: Record<PageData["status"], { label: string; className: string
 };
 
 export function PageEditor({ initial }: { initial: PageData }) {
+  const router = useRouter();
   const [page, setPage] = useState(initial);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [tab, setTab] = useState<InspectorTab>("page");
   const [draggingType, setDraggingType] = useState<string | null>(null);
@@ -121,6 +123,37 @@ export function PageEditor({ initial }: { initial: PageData }) {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  const hasUnsaved = saveState === "dirty" || saveState === "error";
+
+  // Warn on tab close / refresh while edits are unsaved.
+  useEffect(() => {
+    if (!hasUnsaved) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsaved]);
+
+  async function handleBack() {
+    // Live pages never autosave, so unsaved edits would be lost: confirm first.
+    if (hasUnsaved && pageRef.current.status === "published") {
+      setLeaveOpen(true);
+      return;
+    }
+    // Drafts autosave: flush anything pending so no work is lost, then leave.
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (hasUnsaved) await doSave();
+    router.push("/admin/pages");
+  }
+
+  function leaveWithoutSaving() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setLeaveOpen(false);
+    router.push("/admin/pages");
+  }
 
   function handleAction(id: string, action: BlockAction) {
     if (action === "delete") {
@@ -192,9 +225,9 @@ export function PageEditor({ initial }: { initial: PageData }) {
     <div className="fixed inset-0 z-40 flex flex-col" style={{ background: "var(--ad-bg)", color: "var(--ad-text)" }}>
       {/* Top bar */}
       <header className="flex h-16 shrink-0 items-center gap-4 bg-white px-4">
-        <Link href="/admin/pages" className="ad-btn ad-btn-soft" style={{ padding: "0.4rem 0.7rem" }}>
+        <button type="button" onClick={handleBack} className="ad-btn ad-btn-soft" style={{ padding: "0.4rem 0.7rem" }}>
           ←
-        </Link>
+        </button>
         <div className="flex min-w-0 flex-1 flex-col justify-center">
           <div className="flex items-center gap-2.5">
             <input
@@ -313,6 +346,25 @@ export function PageEditor({ initial }: { initial: PageData }) {
             setSaveState("saved");
           }}
         />
+      )}
+
+      {leaveOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-6" onClick={() => setLeaveOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold tracking-tight">Leave without saving?</h2>
+            <p className="mt-2 text-sm" style={{ color: "var(--ad-muted)" }}>
+              This page is live. Your changes have not been saved yet, so the published page still shows the old version. Leave now and your edits will be lost.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="ad-btn ad-btn-soft" onClick={() => setLeaveOpen(false)}>
+                Keep editing
+              </button>
+              <button className="ad-btn ad-btn-danger" onClick={leaveWithoutSaving}>
+                Leave without saving
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
