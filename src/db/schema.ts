@@ -49,6 +49,7 @@ export const pageRevisions = pgTable("page_revisions", {
     .references(() => pages.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   blocks: jsonb("blocks").$type<Block[]>().notNull(),
+  versionName: text("version_name"),
   savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
   savedBy: uuid("saved_by").references(() => users.id, { onDelete: "set null" }),
 });
@@ -83,6 +84,20 @@ export const posts = pgTable("posts", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
+export const postRevisions = pgTable("post_revisions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id")
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  heroImageUrl: text("hero_image_url"),
+  heroImageAlt: text("hero_image_alt"),
+  versionName: text("version_name"),
+  savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+  savedBy: uuid("saved_by").references(() => users.id, { onDelete: "set null" }),
 });
 
 export const redirects = pgTable("redirects", {
@@ -195,3 +210,4 @@ export type Media = typeof media.$inferSelect;
 export type MediaTrash = typeof mediaTrash.$inferSelect;
 export type Menu = typeof menus.$inferSelect;
 export type ContactSubmission = typeof contactSubmissions.$inferSelect;
+export type PostRevision = typeof postRevisions.$inferSelect;

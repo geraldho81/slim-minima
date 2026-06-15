@@ -15,6 +15,20 @@
       "when": 1781352488737,
       "tag": "0001_naive_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781449877496,
+      "tag": "0002_flaky_boom_boom",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781487178221,
+      "tag": "0003_perpetual_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

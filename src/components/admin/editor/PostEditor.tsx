@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { savePost, trashPost, createCategory } from "@/app/admin/actions";
+import { savePost, trashPost, createCategory, listPostRevisions, restorePostRevision, namePostRevision } from "@/app/admin/actions";
 import { RichTextField } from "@/components/admin/editor/RichTextField";
 import { MediaPicker } from "@/components/admin/MediaPicker";
 import { CloudinaryNotice } from "@/components/admin/CloudinaryNotice";
@@ -88,6 +88,7 @@ export function PostEditor({ initial, categories: initialCategories }: { initial
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
 
   const postRef = useRef(post);
   postRef.current = post;
@@ -352,6 +353,9 @@ export function PostEditor({ initial, categories: initialCategories }: { initial
               </div>
             </details>
 
+            <button className="ad-btn ad-btn-soft mb-2 w-full" onClick={() => setRevisionsOpen(true)}>
+              Revision history
+            </button>
             <button
               className="ad-btn ad-btn-danger w-full"
               title="Reversible - restore it from the Trash tab on the posts list"
@@ -367,6 +371,102 @@ export function PostEditor({ initial, categories: initialCategories }: { initial
       </div>
 
       {pickerOpen && <MediaPicker onSelect={(url) => update({ heroImageUrl: url })} onClose={() => setPickerOpen(false)} />}
+      {revisionsOpen && (
+        <PostRevisionsModal
+          postId={post.id}
+          onClose={() => setRevisionsOpen(false)}
+          onRestored={(data) => {
+            setPost((p) => ({ ...p, ...data }));
+            setRevisionsOpen(false);
+            setSaveState("saved");
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+type PostRevision = { id: string; savedAt: string; title: string; versionName: string | null; savedByName: string | null };
+
+function PostRevisionsModal({
+  postId,
+  onClose,
+  onRestored,
+}: {
+  postId: string;
+  onClose: () => void;
+  onRestored: (data: { title: string; body: string; heroImageUrl: string | null; heroImageAlt: string | null }) => void;
+}) {
+  const [revisions, setRevisions] = useState<PostRevision[] | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    listPostRevisions(postId).then(setRevisions).catch(() => setRevisions([]));
+  }, [postId]);
+
+  function updateName(id: string, versionName: string) {
+    setRevisions((prev) => prev?.map((r) => r.id === id ? { ...r, versionName: versionName || null } : r) ?? prev);
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-6" onClick={onClose}>
+      <div className="max-h-[70vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold tracking-tight">Revisions</h2>
+          <button className="ad-btn ad-btn-soft" onClick={onClose}>Close</button>
+        </div>
+        {revisions === null ? (
+          <p className="text-sm" style={{ color: "var(--ad-muted)" }}>Loading...</p>
+        ) : revisions.length === 0 ? (
+          <p className="text-sm" style={{ color: "var(--ad-muted)" }}>
+            No revisions yet. Snapshots are taken automatically as you edit.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {revisions.map((rev) => (
+              <div key={rev.id} className="rounded-lg bg-[var(--ad-bg)] px-3 py-2">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{new Date(rev.savedAt).toLocaleString()}</div>
+                    <div className="text-xs" style={{ color: "var(--ad-muted)" }}>
+                      {rev.title}{rev.savedByName ? ` · ${rev.savedByName}` : ""}
+                    </div>
+                  </div>
+                  <button
+                    className="ad-btn ad-btn-soft shrink-0"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const data = await restorePostRevision(postId, rev.id);
+                        onRestored(data);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Restore
+                  </button>
+                </div>
+                <input
+                  className="w-full rounded-md px-2 py-1 text-xs outline-none"
+                  style={{ background: "var(--ad-line)", color: "var(--ad-text)" }}
+                  placeholder="Add a label for this version..."
+                  defaultValue={rev.versionName ?? ""}
+                  onBlur={(e) => {
+                    const val = e.currentTarget.value;
+                    if ((val || null) !== rev.versionName) {
+                      updateName(rev.id, val);
+                      namePostRevision(postId, rev.id, val);
+                    }
+                  }}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import Link from "next/link";
 import type { Block } from "@/blocks/types";
 import { registry, blockList } from "@/blocks/registry";
-import { savePage, trashPage, listRevisions, restoreRevision } from "@/app/admin/actions";
+import { savePage, trashPage, listRevisions, restoreRevision, namePageRevision } from "@/app/admin/actions";
 import { Canvas, type BlockAction } from "@/components/admin/editor/Canvas";
 import { AutoFields } from "@/components/admin/editor/AutoFields";
 import {
@@ -469,6 +469,8 @@ function PageInspector({
   );
 }
 
+type PageRevision = { id: string; savedAt: string; title: string; versionName: string | null; savedByName: string | null };
+
 function RevisionsModal({
   pageId,
   onClose,
@@ -478,12 +480,16 @@ function RevisionsModal({
   onClose: () => void;
   onRestored: (blocks: Block[]) => void;
 }) {
-  const [revisions, setRevisions] = useState<{ id: string; savedAt: string; title: string; savedByName: string | null }[] | null>(null);
+  const [revisions, setRevisions] = useState<PageRevision[] | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     listRevisions(pageId).then(setRevisions).catch(() => setRevisions([]));
   }, [pageId]);
+
+  function updateName(id: string, versionName: string) {
+    setRevisions((prev) => prev?.map((r) => r.id === id ? { ...r, versionName: versionName || null } : r) ?? prev);
+  }
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 p-6" onClick={onClose}>
@@ -501,29 +507,44 @@ function RevisionsModal({
         ) : (
           <div className="flex flex-col gap-1.5">
             {revisions.map((rev) => (
-              <div key={rev.id} className="flex items-center justify-between rounded-lg bg-[var(--ad-bg)] px-3 py-2">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{new Date(rev.savedAt).toLocaleString()}</div>
-                  <div className="text-xs" style={{ color: "var(--ad-muted)" }}>
-                    {rev.title}
-                    {rev.savedByName ? ` · ${rev.savedByName}` : ""}
+              <div key={rev.id} className="rounded-lg bg-[var(--ad-bg)] px-3 py-2">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{new Date(rev.savedAt).toLocaleString()}</div>
+                    <div className="text-xs" style={{ color: "var(--ad-muted)" }}>
+                      {rev.title}{rev.savedByName ? ` · ${rev.savedByName}` : ""}
+                    </div>
                   </div>
+                  <button
+                    className="ad-btn ad-btn-soft shrink-0"
+                    disabled={busy}
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        const blocks = await restoreRevision(pageId, rev.id);
+                        onRestored(blocks);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    Restore
+                  </button>
                 </div>
-                <button
-                  className="ad-btn ad-btn-soft shrink-0"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    try {
-                      const blocks = await restoreRevision(pageId, rev.id);
-                      onRestored(blocks);
-                    } finally {
-                      setBusy(false);
+                <input
+                  className="w-full rounded-md px-2 py-1 text-xs outline-none"
+                  style={{ background: "var(--ad-line)", color: "var(--ad-text)" }}
+                  placeholder="Add a label for this version..."
+                  defaultValue={rev.versionName ?? ""}
+                  onBlur={(e) => {
+                    const val = e.currentTarget.value;
+                    if ((val || null) !== rev.versionName) {
+                      updateName(rev.id, val);
+                      namePageRevision(pageId, rev.id, val);
                     }
                   }}
-                >
-                  Restore
-                </button>
+                  onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+                />
               </div>
             ))}
           </div>

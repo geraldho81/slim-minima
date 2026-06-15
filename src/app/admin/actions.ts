@@ -6,7 +6,7 @@ import { eq, desc, and, ne, sql, inArray, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes, randomUUID } from "crypto";
 import { db } from "@/db";
-import { pages, pageRevisions, posts, menus, settings, users, apiKeys, categories, redirects, mediaTrash, contactSubmissions } from "@/db/schema";
+import { pages, pageRevisions, posts, postRevisions, menus, settings, users, apiKeys, categories, redirects, mediaTrash, contactSubmissions } from "@/db/schema";
 import type { Block } from "@/blocks/types";
 import type { MenuItem, ContactField, ContactForm } from "@/db/schema";
 import { CONTACT_FORMS_KEY } from "@/lib/queries";
@@ -182,6 +182,7 @@ export async function listRevisions(pageId: string) {
       id: pageRevisions.id,
       savedAt: pageRevisions.savedAt,
       title: pageRevisions.title,
+      versionName: pageRevisions.versionName,
       savedByName: users.name,
     })
     .from(pageRevisions)
@@ -189,6 +190,15 @@ export async function listRevisions(pageId: string) {
     .where(eq(pageRevisions.pageId, pageId))
     .orderBy(desc(pageRevisions.savedAt));
   return rows.map((r) => ({ ...r, savedAt: r.savedAt.toISOString() }));
+}
+
+export async function namePageRevision(pageId: string, revisionId: string, versionName: string) {
+  await requireUser();
+  const trimmed = versionName.trim();
+  await db
+    .update(pageRevisions)
+    .set({ versionName: trimmed || null })
+    .where(and(eq(pageRevisions.id, revisionId), eq(pageRevisions.pageId, pageId)));
 }
 
 export async function restoreRevision(pageId: string, revisionId: string) {
@@ -199,6 +209,46 @@ export async function restoreRevision(pageId: string, revisionId: string) {
   bumpPages();
   pingPublishedPages(rows);
   return rev.blocks;
+}
+
+export async function listPostRevisions(postId: string) {
+  await requireUser();
+  const rows = await db
+    .select({
+      id: postRevisions.id,
+      savedAt: postRevisions.savedAt,
+      title: postRevisions.title,
+      versionName: postRevisions.versionName,
+      savedByName: users.name,
+    })
+    .from(postRevisions)
+    .leftJoin(users, eq(postRevisions.savedBy, users.id))
+    .where(eq(postRevisions.postId, postId))
+    .orderBy(desc(postRevisions.savedAt));
+  return rows.map((r) => ({ ...r, savedAt: r.savedAt.toISOString() }));
+}
+
+export async function namePostRevision(postId: string, revisionId: string, versionName: string) {
+  await requireUser();
+  const trimmed = versionName.trim();
+  await db
+    .update(postRevisions)
+    .set({ versionName: trimmed || null })
+    .where(and(eq(postRevisions.id, revisionId), eq(postRevisions.postId, postId)));
+}
+
+export async function restorePostRevision(postId: string, revisionId: string) {
+  await requireUser();
+  const [rev] = await db.select().from(postRevisions).where(eq(postRevisions.id, revisionId)).limit(1);
+  if (!rev || rev.postId !== postId) throw new Error("Revision not found");
+  const rows = await db
+    .update(posts)
+    .set({ title: rev.title, body: rev.body, heroImageUrl: rev.heroImageUrl, heroImageAlt: rev.heroImageAlt, updatedAt: new Date() })
+    .where(eq(posts.id, postId))
+    .returning({ slug: posts.slug, status: posts.status });
+  bumpPosts();
+  pingPublishedPosts(rows);
+  return { title: rev.title, body: rev.body, heroImageUrl: rev.heroImageUrl, heroImageAlt: rev.heroImageAlt };
 }
 
 /* ============================== Posts ============================== */
@@ -234,7 +284,7 @@ export type PostSave = {
 };
 
 export async function savePost(id: string, data: PostSave) {
-  await requireUser();
+  const user = await requireUser();
   const update: Record<string, unknown> = { updatedAt: new Date() };
   if (data.title !== undefined) update.title = data.title;
   if (data.slug !== undefined) update.slug = slugify(data.slug) || "untitled";
@@ -256,6 +306,31 @@ export async function savePost(id: string, data: PostSave) {
 
   const [post] = await db.update(posts).set(update).where(eq(posts.id, id)).returning();
   if (!post) throw new Error("Post not found");
+
+  // Snapshot a revision at most every 5 minutes when body content changes, keep the last 20.
+  if (data.body !== undefined) {
+    const [latest] = await db
+      .select({ savedAt: postRevisions.savedAt })
+      .from(postRevisions)
+      .where(eq(postRevisions.postId, id))
+      .orderBy(desc(postRevisions.savedAt))
+      .limit(1);
+    if (!latest || Date.now() - new Date(latest.savedAt).getTime() > 5 * 60 * 1000) {
+      await db.insert(postRevisions).values({
+        postId: id,
+        title: post.title,
+        body: post.body,
+        heroImageUrl: post.heroImageUrl,
+        heroImageAlt: post.heroImageAlt,
+        savedBy: user.id,
+      });
+      await db.execute(sql`
+        DELETE FROM post_revisions WHERE post_id = ${id} AND id NOT IN (
+          SELECT id FROM post_revisions WHERE post_id = ${id} ORDER BY saved_at DESC LIMIT 20
+        )`);
+    }
+  }
+
   bumpPosts();
   if (post.status === "published") pingPostsIndexNow([post.slug]);
   return { slug: post.slug, updatedAt: post.updatedAt.toISOString() };
