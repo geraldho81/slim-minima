@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Block } from "@/blocks/types";
@@ -10,22 +10,18 @@ import { registry, blockList } from "@/blocks/registry";
 
 export type BlockAction = "up" | "down" | "duplicate" | "delete";
 
+export const CANVAS_END_DROP_ID = "canvas-end";
+
 type CanvasProps = {
   blocks: Block[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onAction: (id: string, action: BlockAction) => void;
-  onReorder: (activeId: string, overId: string) => void;
   onAddToZone: (containerId: string, zoneIndex: number, type: string) => void;
 };
 
 export function Canvas(props: CanvasProps) {
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (over && active.id !== over.id) props.onReorder(String(active.id), String(over.id));
-  }
+  const { setNodeRef: setEndDropRef, isOver: endDropOver } = useDroppable({ id: CANVAS_END_DROP_ID });
 
   return (
     <div
@@ -38,35 +34,42 @@ export function Canvas(props: CanvasProps) {
       }}
     >
       {props.blocks.length === 0 ? (
-        <div className="flex h-[60vh] items-center justify-center">
+        <div
+          ref={setEndDropRef}
+          className={`flex h-[60vh] items-center justify-center ${endDropOver ? "canvas-drop-active" : ""}`}
+        >
           <p className="text-sm" style={{ color: "var(--ad-muted)" }}>
-            Add your first block from the palette on the left.
+            Add your first block from the palette, or drag one in.
           </p>
         </div>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={props.blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-            {props.blocks.map((block, i) => (
-              <SortableBlock
-                key={block.id}
-                block={block}
-                index={i}
-                total={props.blocks.length}
-                {...props}
-              />
-            ))}
-          </SortableContext>
-        </DndContext>
+        <SortableContext items={props.blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+          {props.blocks.map((block, i) => (
+            <SortableBlock
+              key={block.id}
+              block={block}
+              index={i}
+              total={props.blocks.length}
+              {...props}
+            />
+          ))}
+          <div
+            ref={setEndDropRef}
+            className={`canvas-end-drop ${endDropOver ? "canvas-end-drop-active" : ""}`}
+          />
+        </SortableContext>
       )}
     </div>
   );
 }
 
 function SortableBlock(props: CanvasProps & { block: Block; index: number; total: number }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.block.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isOver, active } = useSortable({ id: props.block.id });
+  const paletteHover = isOver && active?.data.current?.kind === "palette";
   return (
     <div
       ref={setNodeRef}
+      className={paletteHover ? "canvas-insert-before" : undefined}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
     >
       <CanvasBlock

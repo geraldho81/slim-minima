@@ -1097,6 +1097,30 @@ main { min-height: 60vh; }
   justify-content: center;
 }
 
+/* Drag-from-palette drop indicators */
+.canvas-insert-before { position: relative; }
+.canvas-insert-before::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 3px;
+  background: var(--ad-accent);
+  z-index: 5;
+}
+.canvas-end-drop { height: 24px; }
+.canvas-end-drop-active {
+  height: 40px;
+  background: var(--ad-accent-soft);
+  border-top: 3px solid var(--ad-accent);
+}
+.canvas-drop-active {
+  background: var(--ad-accent-soft);
+  outline: 2px dashed var(--ad-accent);
+  outline-offset: -8px;
+}
+
 /* ============================================================
    Scroll-reveal system
    Content is VISIBLE by default. JS adds html.reveal-ready to

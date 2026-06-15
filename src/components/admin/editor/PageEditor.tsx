@@ -2,10 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  PointerSensor,
+  useDraggable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
 import type { Block } from "@/blocks/types";
 import { registry, blockList } from "@/blocks/registry";
 import { savePage, trashPage, listRevisions, restoreRevision, namePageRevision } from "@/app/admin/actions";
-import { Canvas, type BlockAction } from "@/components/admin/editor/Canvas";
+import { Canvas, CANVAS_END_DROP_ID, type BlockAction } from "@/components/admin/editor/Canvas";
 import { AutoFields } from "@/components/admin/editor/AutoFields";
 import {
   createBlock,
@@ -15,6 +26,7 @@ import {
   duplicateBlock,
   moveBlock,
   insertTopLevel,
+  insertTopLevelBefore,
   insertIntoZone,
   reorderTopLevel,
 } from "@/components/admin/editor/blockTree";
@@ -54,6 +66,9 @@ export function PageEditor({ initial }: { initial: PageData }) {
   const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [viewport, setViewport] = useState<Viewport>("desktop");
   const [tab, setTab] = useState<InspectorTab>("page");
+  const [draggingType, setDraggingType] = useState<string | null>(null);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const pageRef = useRef(page);
   pageRef.current = page;
@@ -122,6 +137,34 @@ export function PageEditor({ initial }: { initial: PageData }) {
     setSelectedId(block.id);
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    const data = event.active.data.current;
+    if (data?.kind === "palette") setDraggingType(String(data.type));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingType(null);
+    const { active, over } = event;
+    if (!over) return;
+    const data = active.data.current;
+
+    if (data?.kind === "palette") {
+      // New block dropped in from the palette: insert before the block under the
+      // cursor, or append when dropped on the trailing end zone / empty canvas.
+      const block = createBlock(String(data.type));
+      const overId = String(over.id);
+      const beforeId = page.blocks.some((b) => b.id === overId) ? overId : null;
+      update({ blocks: insertTopLevelBefore(page.blocks, block, beforeId) });
+      setSelectedId(block.id);
+      return;
+    }
+
+    // Reordering an existing top-level block.
+    if (active.id !== over.id && over.id !== CANVAS_END_DROP_ID) {
+      update({ blocks: reorderTopLevel(page.blocks, String(active.id), String(over.id)) });
+    }
+  }
+
   async function handleSaveClick() {
     if (timerRef.current) clearTimeout(timerRef.current);
     await doSave();
@@ -186,6 +229,7 @@ export function PageEditor({ initial }: { initial: PageData }) {
         />
       </header>
 
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex min-h-0 flex-1">
         {/* Palette */}
         <aside className="w-52 shrink-0 overflow-y-auto p-3">
@@ -194,15 +238,7 @@ export function PageEditor({ initial }: { initial: PageData }) {
           </p>
           <div className="flex flex-col gap-1">
             {blockList.map((def) => (
-              <button
-                key={def.type}
-                className="flex items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-left text-[13px] font-semibold transition-shadow hover:shadow-[0_2px_12px_rgba(0,0,0,0.07)]"
-                onClick={() => handleInsert(def.type)}
-                title={def.description}
-              >
-                <span className="w-5 text-center text-sm" style={{ color: "var(--ad-muted)" }}>{def.icon}</span>
-                {def.label}
-              </button>
+              <PaletteItem key={def.type} type={def.type} label={def.label} icon={def.icon} description={def.description} onInsert={handleInsert} />
             ))}
           </div>
         </aside>
@@ -218,7 +254,6 @@ export function PageEditor({ initial }: { initial: PageData }) {
               selectedId={selectedId}
               onSelect={setSelectedId}
               onAction={handleAction}
-              onReorder={(a, b) => update({ blocks: reorderTopLevel(page.blocks, a, b) })}
               onAddToZone={(containerId, zoneIndex, type) => {
                 const block = createBlock(type);
                 update({ blocks: insertIntoZone(page.blocks, containerId, zoneIndex, block) });
@@ -255,6 +290,15 @@ export function PageEditor({ initial }: { initial: PageData }) {
           )}
         </aside>
       </div>
+      <DragOverlay dropAnimation={null}>
+        {draggingType ? (
+          <div className="flex items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-left text-[13px] font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+            <span className="w-5 text-center text-sm" style={{ color: "var(--ad-muted)" }}>{registry[draggingType]?.icon}</span>
+            {registry[draggingType]?.label}
+          </div>
+        ) : null}
+      </DragOverlay>
+      </DndContext>
 
       {revisionsOpen && (
         <RevisionsModal
@@ -268,6 +312,39 @@ export function PageEditor({ initial }: { initial: PageData }) {
         />
       )}
     </div>
+  );
+}
+
+function PaletteItem({
+  type,
+  label,
+  icon,
+  description,
+  onInsert,
+}: {
+  type: string;
+  label: string;
+  icon: ReactNode;
+  description?: string;
+  onInsert: (type: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `palette:${type}`,
+    data: { kind: "palette", type },
+  });
+  return (
+    <button
+      ref={setNodeRef}
+      className="flex items-center gap-2.5 rounded-lg bg-white px-3 py-2 text-left text-[13px] font-semibold transition-shadow hover:shadow-[0_2px_12px_rgba(0,0,0,0.07)]"
+      style={{ cursor: "grab", touchAction: "none", opacity: isDragging ? 0.4 : 1 }}
+      onClick={() => onInsert(type)}
+      title={description}
+      {...attributes}
+      {...listeners}
+    >
+      <span className="w-5 text-center text-sm" style={{ color: "var(--ad-muted)" }}>{icon}</span>
+      {label}
+    </button>
   );
 }
 

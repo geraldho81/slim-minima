@@ -93,6 +93,15 @@ export function insertTopLevel(blocks: Block[], block: Block, afterId?: string |
   return [...blocks, block];
 }
 
+/** Insert into the top level (before a sibling, or at the end). */
+export function insertTopLevelBefore(blocks: Block[], block: Block, beforeId?: string | null): Block[] {
+  if (beforeId) {
+    const i = blocks.findIndex((b) => b.id === beforeId);
+    if (i !== -1) return [...blocks.slice(0, i), block, ...blocks.slice(i)];
+  }
+  return [...blocks, block];
+}
+
 /** Insert into a container block's zone. */
 export function insertIntoZone(blocks: Block[], containerId: string, zoneIndex: number, block: Block): Block[] {
   return blocks.map((b) => {
