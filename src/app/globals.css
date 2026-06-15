@@ -6,6 +6,7 @@
    Change these variables first; the cms-* classes below follow.
    ============================================================ */
 :root {
+  --site-header-height: 72px;
   --bg: #ffffff;
   --surface: #f5f5f4;
   --surface-strong: #ececeb;
@@ -562,7 +563,6 @@ figure figcaption {
    Site header / footer
    ============================================================ */
 .site-header {
-  --site-header-height: 72px;
   position: fixed;
   top: 0;
   left: 0;
@@ -792,7 +792,7 @@ main { min-height: 60vh; }
 @media (max-width: 600px) {
   .cms-grid, .cms-columns, .cms-form { grid-template-columns: 1fr !important; }
   .cms-cta { padding: 2rem; }
-  .site-header { --site-header-height: 60px; }
+  :root { --site-header-height: 60px; }
   .site-header-inner { gap: 0.75rem; }
   .site-logo img { height: 20px; }
   .cms-hero { padding: 1.5rem 0 3rem; }
