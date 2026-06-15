@@ -41,7 +41,7 @@ export default defineBlock<Props>({
     },
   ],
   Render: (p) => (
-    <div className="cms-container cms-block">
+    <div className="cms-container cms-block" data-reveal>
       <div className={`cms-cta cms-cta-${p.tone}`}>
         <div>
           <h2>{p.heading}</h2>

@@ -47,7 +47,7 @@ export default defineBlock<Props>({
   Render: (p) => {
     const items = (p.ctx?.data as PostCard[] | undefined) ?? [];
     return (
-      <section className="cms-container cms-block">
+      <section className="cms-container cms-block" data-reveal>
         {p.heading && (
           <div className="cms-section-head">
             <h2>{p.heading}</h2>

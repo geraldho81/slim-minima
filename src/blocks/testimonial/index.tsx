@@ -29,7 +29,7 @@ export default defineBlock<Props>({
     { kind: "image", name: "avatarUrl", label: "Avatar" },
   ],
   Render: (p) => (
-    <div className="cms-container cms-block cms-narrow">
+    <div className="cms-container cms-block cms-narrow" data-reveal>
       <figure className="cms-testimonial">
         <blockquote>{p.quote}</blockquote>
         <figcaption>

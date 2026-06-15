@@ -1087,3 +1087,25 @@ main { min-height: 60vh; }
   align-items: center;
   justify-content: center;
 }
+
+/* ============================================================
+   Scroll-reveal system
+   Content is VISIBLE by default. JS adds html.reveal-ready to
+   opt elements into the hidden-then-animated state. This means
+   a JS failure or disabled JS never leaves a blank page.
+   SiteFX.tsx manages the class and adds .sm-in via
+   IntersectionObserver as elements scroll into view.
+   ============================================================ */
+html.reveal-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(26px);
+  will-change: transform, opacity;
+  transition: opacity .7s ease, transform .7s ease;
+}
+html.reveal-ready [data-reveal].sm-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.reveal-ready [data-reveal] { opacity: 1 !important; transform: none !important; }
+}

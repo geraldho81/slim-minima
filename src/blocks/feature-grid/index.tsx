@@ -58,7 +58,7 @@ export default defineBlock<Props>({
     },
   ],
   Render: (p) => (
-    <section className="cms-container cms-block">
+    <section className="cms-container cms-block" data-reveal>
       {(p.heading || p.intro) && (
         <div className="cms-section-head">
           {p.heading && <h2>{p.heading}</h2>}

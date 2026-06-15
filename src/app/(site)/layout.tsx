@@ -4,6 +4,7 @@ import type { MenuItem } from "@/db/schema";
 import { safeHref } from "@/lib/content";
 import { GoogleTagManager } from "@/components/site/GoogleTagManager";
 import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFX } from "@/components/site/SiteFX";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   let settings = { siteName: "Slim Minima", tagline: "", logoUrl: "", footerText: "", social: [] as { label: string; href: string }[], defaultOgImage: "", gtmId: "" };
@@ -18,6 +19,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   return (
     <>
       <GoogleTagManager gtmId={settings.gtmId} />
+      <SiteFX />
       <SiteHeader siteName={settings.siteName} logoUrl={settings.logoUrl} items={header} />
       <main>{children}</main>
       <footer className="site-footer">
