@@ -44,3 +44,6 @@ CLAUDE.md
 next-env.d.ts
 .scaffold-backup/
 !.env.example
+
+# local-only marketing drafts (never committed)
+/marketing/
