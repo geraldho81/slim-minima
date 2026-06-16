@@ -45,10 +45,10 @@ export default defineBlock<Props>({
     { kind: "textarea", name: "subheading", label: "Subheading", rows: 3 },
     { kind: "text", name: "primaryLabel", label: "Primary button label" },
     { kind: "text", name: "primaryHref", label: "Primary button link" },
-    { kind: "toggle", name: "primaryNewTab", label: "Open primary in new tab" },
+    { kind: "toggle", name: "primaryNewTab", label: "Open primary button in a new tab", help: "Keeps your site open behind the new page. Use this for links to other websites." },
     { kind: "text", name: "secondaryLabel", label: "Secondary button label" },
     { kind: "text", name: "secondaryHref", label: "Secondary button link" },
-    { kind: "toggle", name: "secondaryNewTab", label: "Open secondary in new tab" },
+    { kind: "toggle", name: "secondaryNewTab", label: "Open secondary button in a new tab", help: "Keeps your site open behind the new page. Use this for links to other websites." },
     { kind: "image", name: "imageUrl", label: "Image" },
     { kind: "text", name: "imageAlt", label: "Image alt text" },
     {

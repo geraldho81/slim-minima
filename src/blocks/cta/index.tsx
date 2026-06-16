@@ -32,7 +32,7 @@ export default defineBlock<Props>({
     { kind: "textarea", name: "body", label: "Body", rows: 2 },
     { kind: "text", name: "buttonLabel", label: "Button label" },
     { kind: "text", name: "buttonHref", label: "Button link" },
-    { kind: "toggle", name: "buttonNewTab", label: "Open in new tab" },
+    { kind: "toggle", name: "buttonNewTab", label: "Open link in a new tab", help: "Keeps your site open behind the new page. Use this for links to other websites." },
     {
       kind: "select",
       name: "tone",

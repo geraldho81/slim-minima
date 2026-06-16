@@ -34,7 +34,7 @@ export default defineBlock<Props>({
         { kind: "image", name: "url", label: "Logo image" },
         { kind: "text", name: "alt", label: "Company name" },
         { kind: "text", name: "href", label: "Link (optional)" },
-        { kind: "toggle", name: "newTab", label: "Open in new tab" },
+        { kind: "toggle", name: "newTab", label: "Open link in a new tab", help: "Keeps your site open behind the new page. Use this for links to other websites." },
       ],
     },
   ],

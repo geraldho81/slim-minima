@@ -59,20 +59,26 @@ function Field({ field, value, onChange }: { field: FieldSpec; value: unknown; o
       );
     case "toggle":
       return (
-        <div className="ad-field flex items-center justify-between">
-          <label className="ad-label" style={{ marginBottom: 0 }}>{field.label}</label>
+        <div className="ad-field flex items-start gap-2.5">
           <button
             type="button"
             role="switch"
             aria-checked={!!value}
+            aria-label={field.label}
             onClick={() => onChange(!value)}
-            className="relative h-5 w-9 rounded-full transition-colors"
+            className="relative mt-0.5 h-5 w-9 shrink-0 rounded-full transition-colors"
             style={{ background: value ? "var(--ad-accent)" : "#d6d6d0" }}
           >
             <span
               className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
               style={{ left: value ? "calc(100% - 18px)" : "2px" }}
             />
+          </button>
+          <button type="button" className="min-w-0 text-left" onClick={() => onChange(!value)}>
+            <span className="block text-xs font-semibold" style={{ color: "var(--ad-text)" }}>{field.label}</span>
+            {field.help && (
+              <span className="mt-0.5 block text-[11px] leading-snug" style={{ color: "var(--ad-muted)" }}>{field.help}</span>
+            )}
           </button>
         </div>
       );

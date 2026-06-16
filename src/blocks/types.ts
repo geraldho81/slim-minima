@@ -18,7 +18,7 @@ export type FieldSpec =
   | { kind: "text"; name: string; label: string; placeholder?: string }
   | { kind: "textarea"; name: string; label: string; rows?: number; placeholder?: string }
   | { kind: "number"; name: string; label: string; min?: number; max?: number; step?: number }
-  | { kind: "toggle"; name: string; label: string }
+  | { kind: "toggle"; name: string; label: string; help?: string }
   | { kind: "select"; name: string; label: string; options: { value: string; label: string }[] }
   | { kind: "image"; name: string; label: string }
   | { kind: "page"; name: string; label: string; placeholder?: string }
