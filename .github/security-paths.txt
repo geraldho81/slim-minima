@@ -1,0 +1,15 @@
+# Files the Slim Minima security-update button overwrites from the release tag.
+# This is the "security layer": only security-critical framework code lives here.
+# The button never touches your blocks, theme, layout, or content.
+#
+# Lines starting with # are comments. Paths may be files or directories.
+src/lib/auth.ts
+src/lib/api-auth.ts
+src/lib/contact-token.ts
+src/lib/updates.ts
+src/lib/mcp
+src/app/api/auth
+src/app/api/admin/upload-signature
+src/app/api/cron
+.github/security-paths.txt
+.github/workflows/slim-minima-security-update.yml

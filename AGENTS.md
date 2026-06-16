@@ -383,6 +383,26 @@ Releases without that marker (features, layout, docs) are ignored by the notifie
 purpose: only security fixes flow through the CMS. Sites can point the notifier at a
 different repo with `SLIM_MINIMA_UPDATE_REPO=owner/name`.
 
+### Applying an update (the Update button)
+
+The panel's **Update** button does not patch the running site. It triggers
+`.github/workflows/slim-minima-security-update.yml` in the site's own repo, which:
+
+1. overwrites **only** the files listed in `.github/security-paths.txt` with the
+   release tag's version (the security layer - never blocks, theme, or content),
+2. bumps `package.json` version,
+3. runs `npm run typecheck` to validate,
+4. opens a pull request. A human reviews and merges it, which redeploys normally.
+
+Because it overwrites a fixed path set rather than merging, it cannot conflict with a
+developer's customizations. A security fix that must change a file outside
+`security-paths.txt` should say so in its release notes for manual handling.
+
+Wiring on the site: `SLIM_MINIMA_SITE_REPO` (auto-detected on Vercel) names the repo;
+with `SLIM_MINIMA_GH_TOKEN` (fine-grained, Actions:write) the button dispatches
+automatically, otherwise it links to the workflow's Run page. The maintainer must
+keep `security-paths.txt` accurate as the security surface evolves.
+
 ## Key files
 
 ```

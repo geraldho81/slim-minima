@@ -1,7 +1,11 @@
 import type { UpdateStatus } from "@/lib/updates";
+import { getApplyConfig } from "@/lib/updates";
+import { SecurityUpdateButton } from "@/components/admin/SecurityUpdateButton";
 
 export function SecurityUpdates({ status }: { status: UpdateStatus }) {
   const count = status.pending.length;
+  const apply = getApplyConfig();
+  const target = status.pending[0]?.version ?? null;
 
   return (
     <section className="mb-6 rounded-xl bg-white p-5">
@@ -51,8 +55,16 @@ export function SecurityUpdates({ status }: { status: UpdateStatus }) {
               </div>
             );
           })}
+          {target && (
+            <SecurityUpdateButton
+              version={target}
+              canDispatch={apply.canDispatch}
+              runWorkflowUrl={apply.runWorkflowUrl}
+            />
+          )}
           <p className="text-xs" style={{ color: "var(--ad-muted)" }}>
-            One-click apply is coming soon. For now, pull the update into your repository and redeploy.
+            Updating only changes Slim Minima security files and opens a pull request for you to
+            review and merge. Your blocks, theme, and content are not touched.
           </p>
         </div>
       )}

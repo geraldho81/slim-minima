@@ -1,0 +1,71 @@
+name: Slim Minima security update
+
+# Applies a Slim Minima security release to this site by overwriting only the
+# security-critical files (see .github/security-paths.txt), bumping the version,
+# validating with a typecheck, and opening a pull request. Nothing is deployed
+# until a human reviews and merges that PR. Your blocks, theme, and content are
+# never touched.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Security release version to apply (e.g. 0.1.1)"
+        required: true
+      upstream:
+        description: "Upstream Slim Minima repo URL"
+        required: false
+        default: "https://github.com/geraldho81/slim-minima.git"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch upstream release
+        run: |
+          git remote add upstream "${{ inputs.upstream }}" 2>/dev/null \
+            || git remote set-url upstream "${{ inputs.upstream }}"
+          git fetch upstream --tags --quiet
+
+      - name: Apply security files from v${{ inputs.version }}
+        run: |
+          TAG="v${{ inputs.version }}"
+          # Take the path list from the release itself so the list can be updated too.
+          git checkout "$TAG" -- .github/security-paths.txt
+          while IFS= read -r path || [ -n "$path" ]; do
+            case "$path" in ''|\#*) continue ;; esac
+            if git checkout "$TAG" -- "$path" 2>/dev/null; then
+              echo "updated $path"
+            else
+              echo "skip (not in release) $path"
+            fi
+          done < .github/security-paths.txt
+          npm pkg set version="${{ inputs.version }}"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate
+        run: |
+          npm ci
+          npm run typecheck
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: "security-update/v${{ inputs.version }}"
+          title: "Security update: v${{ inputs.version }}"
+          commit-message: "Apply Slim Minima security update v${{ inputs.version }}"
+          body: |
+            Applies Slim Minima security release **v${{ inputs.version }}**.
+
+            Only security-critical files and the version number changed. Your
+            blocks, theme, and content were not touched. Review the diff and
+            merge to deploy the fix.

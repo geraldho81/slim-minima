@@ -17,6 +17,14 @@ import { CACHE_TAGS } from "@/lib/queries";
 import { slugify } from "@/lib/content";
 import { pingPagesIndexNow, pingPostsIndexNow } from "@/lib/indexnow";
 import { regenerateMcpToken, revokeMcpToken } from "@/lib/mcp/token";
+import { dispatchSecurityUpdate } from "@/lib/updates";
+
+/* ============================== Security updates ============================== */
+
+export async function startSecurityUpdate(version: string) {
+  await requireAdmin();
+  return dispatchSecurityUpdate(version);
+}
 
 function bumpPages() {
   revalidateTag(CACHE_TAGS.pages, "max");
