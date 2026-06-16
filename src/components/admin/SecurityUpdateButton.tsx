@@ -110,14 +110,29 @@ function ConnectForm({ repo, onConnected }: { repo: string | null; onConnected: 
   return (
     <div className="flex flex-col gap-3 rounded-lg p-4" style={{ background: "var(--ad-accent-soft)" }}>
       <p className="text-xs" style={{ color: "var(--ad-muted)" }}>
-        Connect once and updating becomes a single click. Create a GitHub token, give it
-        the <strong>Actions: Read and write</strong> permission on your site repository,
-        then paste it here. It is stored only in your own site and used only to start the
-        update workflow.
+        Connect once and updating becomes a single click. Open the GitHub token page below and
+        set just these three things - leave everything else on its default:
       </p>
+      <ol className="ml-4 list-decimal text-xs" style={{ color: "var(--ad-muted)" }}>
+        <li className="mb-1">
+          <strong>Repository access</strong>: choose <strong>Only select repositories</strong> and
+          pick your site repo.
+        </li>
+        <li className="mb-1">
+          <strong>Permissions</strong> &rarr; <strong>Repository permissions</strong>: find
+          <strong> Actions</strong> in the list and set it to <strong>Read and write</strong>. (No
+          other permission is needed.)
+        </li>
+        <li>
+          Click <strong>Generate token</strong>, copy it, and paste it below.
+        </li>
+      </ol>
       <a href={TOKEN_HELP} target="_blank" rel="noreferrer" className="w-fit text-xs font-semibold underline" style={{ color: "var(--ad-accent)" }}>
-        Create a token on GitHub ↗
+        Open the GitHub token page ↗
       </a>
+      <p className="text-xs" style={{ color: "var(--ad-muted)" }}>
+        The token is stored only in your own site and used only to start the update.
+      </p>
       <div className="ad-field">
         <label className="ad-label">Repository (owner/name)</label>
         <input className="ad-input" value={repoInput} placeholder="acme/acme-website" onChange={(e) => setRepoInput(e.target.value)} />
