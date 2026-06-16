@@ -70,11 +70,31 @@ export function SiteHeader({
         </Link>
 
         <nav className="site-nav site-nav-desktop" aria-label="Primary navigation">
-          {items.map((item) => (
-            <Link key={item.href} href={safeHref(item.href)} {...linkAttrs({ newTab: item.newTab })}>
-              {item.label}
-            </Link>
-          ))}
+          {items.map((item) => {
+            const children = item.children ?? [];
+            if (children.length === 0) {
+              return (
+                <Link key={item.href} href={safeHref(item.href)} {...linkAttrs({ newTab: item.newTab })}>
+                  {item.label}
+                </Link>
+              );
+            }
+            return (
+              <div key={item.href} className="site-nav-group">
+                <Link href={safeHref(item.href)} {...linkAttrs({ newTab: item.newTab })} className="site-nav-parent">
+                  {item.label}
+                  <span aria-hidden="true" className="site-nav-caret">▾</span>
+                </Link>
+                <div className="site-dropdown">
+                  {children.map((child) => (
+                    <Link key={child.href} href={safeHref(child.href)} {...linkAttrs({ newTab: child.newTab })}>
+                      {child.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
 
         <button
@@ -102,11 +122,26 @@ export function SiteHeader({
         />
         <nav id={menuId} className="site-mobile-nav" aria-label="Mobile navigation">
           {items.map((item, index) => (
-            <Link key={item.href} href={safeHref(item.href)} {...linkAttrs({ newTab: item.newTab })} tabIndex={open ? 0 : -1} onClick={close}>
-              <span className="site-mobile-nav-index">{String(index + 1).padStart(2, "0")}</span>
-              <span>{item.label}</span>
-              <span aria-hidden="true">↗</span>
-            </Link>
+            <div key={item.href} className="site-mobile-nav-item">
+              <Link href={safeHref(item.href)} {...linkAttrs({ newTab: item.newTab })} tabIndex={open ? 0 : -1} onClick={close}>
+                <span className="site-mobile-nav-index">{String(index + 1).padStart(2, "0")}</span>
+                <span>{item.label}</span>
+                <span aria-hidden="true">↗</span>
+              </Link>
+              {(item.children ?? []).map((child) => (
+                <Link
+                  key={child.href}
+                  href={safeHref(child.href)}
+                  {...linkAttrs({ newTab: child.newTab })}
+                  className="site-mobile-nav-child"
+                  tabIndex={open ? 0 : -1}
+                  onClick={close}
+                >
+                  <span>{child.label}</span>
+                  <span aria-hidden="true">↗</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
       </div>
