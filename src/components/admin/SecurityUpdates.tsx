@@ -60,12 +60,11 @@ export async function SecurityUpdates({ status }: { status: UpdateStatus }) {
               version={target}
               connected={apply.connected}
               repo={apply.repo}
-              runWorkflowUrl={apply.runWorkflowUrl}
             />
           )}
           <p className="text-xs" style={{ color: "var(--ad-muted)" }}>
-            Updating only changes Slim Minima security files and opens a pull request for you to
-            review and merge. Your blocks, theme, and content are not touched.
+            Updating changes only Slim Minima security files and the version number, then
+            redeploys your site. Your blocks, theme, and content are not touched.
           </p>
         </div>
       )}

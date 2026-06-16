@@ -2,9 +2,9 @@ name: Slim Minima security update
 
 # Applies a Slim Minima security release to this site by overwriting only the
 # security-critical files (see .github/security-paths.txt), bumping the version,
-# validating with a typecheck, and opening a pull request. Nothing is deployed
-# until a human reviews and merges that PR. Your blocks, theme, and content are
-# never touched.
+# validating with a typecheck, and committing straight to the branch it was
+# dispatched on so the site redeploys with the fix. Your blocks, theme, and
+# content are never touched.
 
 on:
   workflow_dispatch:
@@ -19,7 +19,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   apply:
@@ -57,15 +56,14 @@ jobs:
           npm ci
           npm run typecheck
 
-      - name: Open pull request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          branch: "security-update/v${{ inputs.version }}"
-          title: "Security update: v${{ inputs.version }}"
-          commit-message: "Apply Slim Minima security update v${{ inputs.version }}"
-          body: |
-            Applies Slim Minima security release **v${{ inputs.version }}**.
-
-            Only security-critical files and the version number changed. Your
-            blocks, theme, and content were not touched. Review the diff and
-            merge to deploy the fix.
+      - name: Commit the fix
+        run: |
+          if git diff --quiet; then
+            echo "Nothing changed - already on v${{ inputs.version }}."
+            exit 0
+          fi
+          git config user.name "slim-minima-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add -A
+          git commit -m "Apply Slim Minima security update v${{ inputs.version }}"
+          git push origin HEAD

@@ -8,17 +8,16 @@ type Props = {
   version: string;
   connected: boolean;
   repo: string | null;
-  runWorkflowUrl: string | null;
 };
 
 const TOKEN_HELP = "https://github.com/settings/personal-access-tokens/new";
 
-export function SecurityUpdateActions({ version, connected, repo, runWorkflowUrl }: Props) {
+export function SecurityUpdateActions({ version, connected, repo }: Props) {
   const router = useRouter();
 
   // ---- Connected: a real one-click Update button ----
   if (connected) {
-    return <ConnectedActions version={version} repo={repo} runWorkflowUrl={runWorkflowUrl} onChange={() => router.refresh()} />;
+    return <ConnectedActions version={version} repo={repo} onChange={() => router.refresh()} />;
   }
 
   // ---- Not connected: a one-time connect step ----
@@ -28,12 +27,10 @@ export function SecurityUpdateActions({ version, connected, repo, runWorkflowUrl
 function ConnectedActions({
   version,
   repo,
-  runWorkflowUrl,
   onChange,
 }: {
   version: string;
   repo: string | null;
-  runWorkflowUrl: string | null;
   onChange: () => void;
 }) {
   const [state, setState] = useState<"idle" | "working" | "done" | "error">("idle");
@@ -45,7 +42,7 @@ function ConnectedActions({
     const res = await startSecurityUpdate(version);
     if (res.ok) {
       setState("done");
-      setMessage("Update started. A pull request will appear in your repository shortly. Review and merge it to deploy the fix.");
+      setMessage(`Updating to v${version}. Your site redeploys with the fix in a few minutes - this notice clears itself once it is live.`);
     } else {
       setState("error");
       setMessage(res.error ?? "Could not start the update.");
@@ -72,12 +69,6 @@ function ConnectedActions({
         <button type="button" onClick={async () => { await disconnectGithubUpdates(); onChange(); }} className="underline">
           Disconnect
         </button>
-        {runWorkflowUrl && state === "done" && (
-          <>
-            <span>·</span>
-            <a href={runWorkflowUrl} target="_blank" rel="noreferrer" className="underline">View on GitHub ↗</a>
-          </>
-        )}
       </div>
     </div>
   );
