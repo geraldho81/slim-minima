@@ -52,19 +52,29 @@ export function AdminSidebar({
   userName,
   role,
   userImage,
+  securityUpdateCount = 0,
 }: {
   userName: string;
   role: "admin" | "editor";
   userImage: string | null;
+  securityUpdateCount?: number;
 }) {
   const pathname = usePathname();
 
   const renderItem = (item: NavItem) => {
     const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+    const showBadge = item.href === "/admin/settings" && securityUpdateCount > 0;
     return (
       <Link key={item.href} href={item.href} className={`ad-nav-item ${active ? "ad-nav-active" : ""}`}>
         <Icon path={ICONS[item.icon]} />
         {item.label}
+        {showBadge && (
+          <span
+            className="ml-auto h-2 w-2 shrink-0 rounded-full"
+            style={{ background: "var(--ad-accent)" }}
+            aria-label="Security update available"
+          />
+        )}
       </Link>
     );
   };

@@ -9,12 +9,15 @@ import { ApiKeysSection } from "@/components/admin/ApiKeysSection";
 import { McpConnector } from "@/components/admin/McpConnector";
 import { siteUrl } from "@/lib/site-url";
 import { getOrCreateMcpToken } from "@/lib/mcp/token";
+import { SecurityUpdates } from "@/components/admin/SecurityUpdates";
+import { getUpdateStatus } from "@/lib/updates";
 
 export default async function SettingsPage() {
   const user = await requireAdmin();
-  const [rows, keys] = await Promise.all([
+  const [rows, keys, updateStatus] = await Promise.all([
     db.select().from(settings),
     db.select({ id: apiKeys.id, name: apiKeys.name, createdAt: apiKeys.createdAt, lastUsedAt: apiKeys.lastUsedAt }).from(apiKeys).orderBy(desc(apiKeys.createdAt)),
+    getUpdateStatus(),
   ]);
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
 
@@ -30,6 +33,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl px-8 py-10">
       <h1 className="mb-6 text-2xl font-bold tracking-tight">Settings</h1>
+      <SecurityUpdates status={updateStatus} />
       <SettingsForm
         initial={{
           siteName: (map.siteName as string) ?? "Slim Minima",

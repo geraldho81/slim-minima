@@ -365,6 +365,24 @@ GET    /api/v1/media
 GET/PUT /api/v1/settings       {settings: {...}, menus: {header, footer}}
 ```
 
+## Releasing security updates
+
+The admin shows a security-update notice (Settings -> Security updates, plus a badge
+and banner) by reading this repo's GitHub Releases. `src/lib/updates.ts` fetches
+`/releases`, keeps only releases flagged as security, and compares them to the
+installed `package.json` version.
+
+A release counts as a security update **only if its release notes contain a line
+`Type: security`**. To ship one:
+
+1. Bump `version` in `package.json`.
+2. Tag and create a GitHub Release whose notes start with `Type: security`, followed
+   by a short, plain-language summary of what the fix addresses.
+
+Releases without that marker (features, layout, docs) are ignored by the notifier on
+purpose: only security fixes flow through the CMS. Sites can point the notifier at a
+different repo with `SLIM_MINIMA_UPDATE_REPO=owner/name`.
+
 ## Key files
 
 ```
