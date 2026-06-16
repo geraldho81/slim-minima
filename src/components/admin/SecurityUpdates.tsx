@@ -1,10 +1,10 @@
 import type { UpdateStatus } from "@/lib/updates";
 import { getApplyConfig } from "@/lib/updates";
-import { SecurityUpdateButton } from "@/components/admin/SecurityUpdateButton";
+import { SecurityUpdateActions } from "@/components/admin/SecurityUpdateButton";
 
-export function SecurityUpdates({ status }: { status: UpdateStatus }) {
+export async function SecurityUpdates({ status }: { status: UpdateStatus }) {
   const count = status.pending.length;
-  const apply = getApplyConfig();
+  const apply = await getApplyConfig();
   const target = status.pending[0]?.version ?? null;
 
   return (
@@ -56,9 +56,10 @@ export function SecurityUpdates({ status }: { status: UpdateStatus }) {
             );
           })}
           {target && (
-            <SecurityUpdateButton
+            <SecurityUpdateActions
               version={target}
-              canDispatch={apply.canDispatch}
+              connected={apply.connected}
+              repo={apply.repo}
               runWorkflowUrl={apply.runWorkflowUrl}
             />
           )}

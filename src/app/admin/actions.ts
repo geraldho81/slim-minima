@@ -17,13 +17,52 @@ import { CACHE_TAGS } from "@/lib/queries";
 import { slugify } from "@/lib/content";
 import { pingPagesIndexNow, pingPostsIndexNow } from "@/lib/indexnow";
 import { regenerateMcpToken, revokeMcpToken } from "@/lib/mcp/token";
-import { dispatchSecurityUpdate } from "@/lib/updates";
+import { dispatchSecurityUpdate, UPDATE_KEYS } from "@/lib/updates";
 
 /* ============================== Security updates ============================== */
 
 export async function startSecurityUpdate(version: string) {
   await requireAdmin();
   return dispatchSecurityUpdate(version);
+}
+
+/** Store the one-time GitHub connection (repo + token) in the site's own DB so
+ *  the Update button can apply security fixes on its own. The token only needs
+ *  the "Actions" permission. Admin only. */
+export async function connectGithubUpdates(input: { repo: string; token: string }) {
+  await requireAdmin();
+  const repo = input.repo
+    .trim()
+    .replace(/^https?:\/\/github\.com\//i, "")
+    .replace(/\.git$/i, "")
+    .replace(/\/$/, "");
+  const token = input.token.trim();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) return { ok: false as const, error: "Enter the repository as owner/name." };
+  if (!token) return { ok: false as const, error: "Paste a GitHub token." };
+
+  // Light check that the token actually reaches this repo, for a clear error.
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+    });
+    if (res.status === 401 || res.status === 403) return { ok: false as const, error: "GitHub rejected that token. Check it has access to this repo." };
+    if (res.status === 404) return { ok: false as const, error: "Could not find that repo with this token. Check owner/name and the token's repository access." };
+  } catch {
+    // Network hiccup - save anyway rather than block the user.
+  }
+
+  for (const [key, value] of Object.entries({ [UPDATE_KEYS.repo]: repo, [UPDATE_KEYS.token]: token })) {
+    await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } });
+  }
+  revalidatePath("/admin/settings");
+  return { ok: true as const };
+}
+
+export async function disconnectGithubUpdates() {
+  await requireAdmin();
+  await db.delete(settings).where(inArray(settings.key, [UPDATE_KEYS.repo, UPDATE_KEYS.token]));
+  revalidatePath("/admin/settings");
+  return { ok: true as const };
 }
 
 function bumpPages() {

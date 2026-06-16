@@ -398,10 +398,14 @@ Because it overwrites a fixed path set rather than merging, it cannot conflict w
 developer's customizations. A security fix that must change a file outside
 `security-paths.txt` should say so in its release notes for manual handling.
 
-Wiring on the site: `SLIM_MINIMA_SITE_REPO` (auto-detected on Vercel) names the repo;
-with `SLIM_MINIMA_GH_TOKEN` (fine-grained, Actions:write) the button dispatches
-automatically, otherwise it links to the workflow's Run page. The maintainer must
-keep `security-paths.txt` accurate as the security surface evolves.
+Wiring on the site: the easiest path is the **Connect GitHub** button in the panel.
+The user pastes a fine-grained token (Actions: Read and write on their repo) once; it
+is stored in the site's own `settings` table (keys in `UPDATE_KEYS`) and the Update
+button then dispatches the workflow on its own. The repo is auto-detected on Vercel
+(`VERCEL_GIT_REPO_*`). Env vars still work and take precedence: `SLIM_MINIMA_SITE_REPO`
+and `SLIM_MINIMA_GH_TOKEN`. The token only triggers the workflow; the Action itself
+holds contents/PR permissions via its own `GITHUB_TOKEN`. The maintainer must keep
+`security-paths.txt` accurate as the security surface evolves.
 
 ## Key files
 

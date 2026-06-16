@@ -1,5 +1,8 @@
 import "server-only";
+import { inArray } from "drizzle-orm";
 import pkg from "../../package.json";
+import { db } from "@/db";
+import { settings } from "@/db/schema";
 
 export type SecurityRelease = {
   version: string;
@@ -99,26 +102,52 @@ const WORKFLOW_FILE = "slim-minima-security-update.yml";
 export type ApplyConfig = {
   /** owner/name of THIS site's repo, where the update workflow runs. */
   repo: string | null;
-  /** true when a token is set and the button can dispatch directly. */
+  /** true when GitHub is connected (repo + token) and the button can apply on its own. */
+  connected: boolean;
+  /** kept for callers; same as connected. */
   canDispatch: boolean;
-  /** link to the Action's "Run workflow" page, used when there is no token. */
+  /** link to the Action's "Run workflow" page, used as a manual fallback. */
   runWorkflowUrl: string | null;
 };
 
-/** Resolve the site repo from an explicit var, falling back to Vercel's git env. */
-function siteRepo(): string | null {
-  if (process.env.SLIM_MINIMA_SITE_REPO) return process.env.SLIM_MINIMA_SITE_REPO;
+/** Settings keys for the in-CMS GitHub connection (stored in the site's own DB). */
+export const UPDATE_KEYS = { repo: "githubUpdateRepo", token: "githubUpdateToken" } as const;
+
+/** The repo we can auto-detect from Vercel's git env, if any. */
+export function detectedRepo(): string | null {
   const owner = process.env.VERCEL_GIT_REPO_OWNER;
   const slug = process.env.VERCEL_GIT_REPO_SLUG;
   return owner && slug ? `${owner}/${slug}` : null;
 }
 
-export function getApplyConfig(): ApplyConfig {
-  const repo = siteRepo();
-  const canDispatch = !!(repo && process.env.SLIM_MINIMA_GH_TOKEN);
+async function readUpdateSettings(): Promise<{ repo: string; token: string }> {
+  try {
+    const rows = await db
+      .select()
+      .from(settings)
+      .where(inArray(settings.key, [UPDATE_KEYS.repo, UPDATE_KEYS.token]));
+    const map = Object.fromEntries(rows.map((r) => [r.key, typeof r.value === "string" ? r.value : ""]));
+    return { repo: map[UPDATE_KEYS.repo] ?? "", token: map[UPDATE_KEYS.token] ?? "" };
+  } catch {
+    return { repo: "", token: "" };
+  }
+}
+
+/** Resolve repo + token from env first, then the stored connection, then Vercel detection. */
+async function resolveApply(): Promise<{ repo: string | null; token: string }> {
+  const s = await readUpdateSettings();
+  const repo = process.env.SLIM_MINIMA_SITE_REPO || s.repo || detectedRepo();
+  const token = process.env.SLIM_MINIMA_GH_TOKEN || s.token || "";
+  return { repo: repo || null, token };
+}
+
+export async function getApplyConfig(): Promise<ApplyConfig> {
+  const { repo, token } = await resolveApply();
+  const connected = !!(repo && token);
   return {
     repo,
-    canDispatch,
+    connected,
+    canDispatch: connected,
     runWorkflowUrl: repo ? `https://github.com/${repo}/actions/workflows/${WORKFLOW_FILE}` : null,
   };
 }
@@ -131,12 +160,12 @@ export function getApplyConfig(): ApplyConfig {
 export async function dispatchSecurityUpdate(
   version: string
 ): Promise<{ ok: boolean; error?: string; runWorkflowUrl?: string }> {
-  const { repo, runWorkflowUrl } = getApplyConfig();
-  const token = process.env.SLIM_MINIMA_GH_TOKEN;
-  if (!repo) return { ok: false, error: "Site repository is not known. Set SLIM_MINIMA_SITE_REPO." };
-  if (!token) return { ok: false, error: "No token set.", runWorkflowUrl: runWorkflowUrl ?? undefined };
+  const { repo, token } = await resolveApply();
+  const runWorkflowUrl = repo ? `https://github.com/${repo}/actions/workflows/${WORKFLOW_FILE}` : undefined;
+  if (!repo) return { ok: false, error: "No GitHub repository connected yet." };
+  if (!token) return { ok: false, error: "GitHub is not connected.", runWorkflowUrl };
 
-  const branch = process.env.SLIM_MINIMA_SITE_BRANCH || "main";
+  const branch = process.env.SLIM_MINIMA_SITE_BRANCH || process.env.VERCEL_GIT_COMMIT_REF || "main";
   try {
     const res = await fetch(
       `https://api.github.com/repos/${repo}/actions/workflows/${WORKFLOW_FILE}/dispatches`,
