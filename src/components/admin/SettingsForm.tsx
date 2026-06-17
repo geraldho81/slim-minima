@@ -14,11 +14,12 @@ type Values = {
   footerText: string;
   social: { label: string; href: string }[];
   gtmId: string;
+  homePage: string;
 };
 
 const GTM_ID_PATTERN = /^GTM-[A-Z0-9]{4,12}$/;
 
-export function SettingsForm({ initial }: { initial: Values }) {
+export function SettingsForm({ initial, pages }: { initial: Values; pages: { slug: string; title: string }[] }) {
   const [values, setValues] = useState(initial);
   const [state, setState] = useState<"idle" | "dirty" | "saving" | "saved">("idle");
   const [showLogoPicker, setShowLogoPicker] = useState(false);
@@ -59,6 +60,20 @@ export function SettingsForm({ initial }: { initial: Values }) {
         <div className="ad-field">
           <label className="ad-label">Default social image URL</label>
           <input className="ad-input" value={values.defaultOgImage} placeholder="https://..." onChange={(e) => update({ defaultOgImage: e.target.value })} />
+        </div>
+        <div className="ad-field">
+          <label className="ad-label">Homepage</label>
+          <select className="ad-input" value={values.homePage} onChange={(e) => update({ homePage: e.target.value })}>
+            <option value="blog">Latest blog posts</option>
+            {pages.map((p) => (
+              <option key={p.slug} value={p.slug}>
+                {p.title} (/{p.slug === "home" ? "" : p.slug})
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs" style={{ color: "var(--ad-muted)" }}>
+            What visitors see at your site root. Pick a page, or show your latest blog posts.
+          </p>
         </div>
       </div>
 

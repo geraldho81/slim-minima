@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { BlockRenderer } from "@/blocks/BlockRenderer";
+import { BlogList } from "@/components/site/BlogList";
 import { getPageBySlug, getRedirect, getSettings } from "@/lib/queries";
 import { isLive } from "@/lib/content";
 import { auth } from "@/lib/auth";
@@ -10,17 +11,22 @@ import { collectFaqItems } from "@/lib/block-text";
 
 type Props = {
   params: Promise<{ slug?: string[] }>;
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; category?: string; tag?: string }>;
 };
 
-function slugFromParams(slug?: string[]): string {
-  return slug?.length ? slug.join("/") : "home";
+// The page slug that serves at "/", per the homePage setting. "blog" means the
+// blog listing renders at root instead of a page.
+async function homePageSlug(): Promise<string> {
+  const settings = await getSettings();
+  return settings.homePage || "home";
 }
 
 async function resolvePage(props: Props) {
   const { slug } = await props.params;
   const { preview } = await props.searchParams;
-  const page = await getPageBySlug(slugFromParams(slug));
+  const isRoot = !slug?.length;
+  const effectiveSlug = isRoot ? await homePageSlug() : slug.join("/");
+  const page = await getPageBySlug(effectiveSlug);
   if (!page) return null;
   if (!isLive(page.status, page.publishAt)) {
     // Drafts are visible only to signed-in editors with ?preview=1
@@ -32,13 +38,24 @@ async function resolvePage(props: Props) {
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
+  const { slug } = await props.params;
+  const isRoot = !slug?.length;
+  const settings = await getSettings();
+
+  if (isRoot && settings.homePage === "blog") {
+    return {
+      title: `${settings.siteName}`,
+      description: settings.tagline || `Articles and guides from ${settings.siteName}`,
+      alternates: { canonical: siteUrl() },
+    };
+  }
+
   const page = await resolvePage(props);
   if (!page) return {};
-  const settings = await getSettings();
   const title = page.metaTitle || `${page.title} | ${settings.siteName}`;
   const description = page.metaDescription || settings.tagline || undefined;
   const ogImage = page.ogImage || settings.defaultOgImage || undefined;
-  const canonical = page.slug === "home" ? siteUrl() : `${siteUrl()}/${page.slug}`;
+  const canonical = isRoot ? siteUrl() : `${siteUrl()}/${page.slug}`;
   return {
     title,
     description,
@@ -54,11 +71,30 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 }
 
 export default async function CmsPage(props: Props) {
+  const { slug } = await props.params;
+  const { category, tag } = await props.searchParams;
+  const isRoot = !slug?.length;
+  const settings = await getSettings();
+
+  // Blog set as the home page: render the listing at root
+  if (isRoot && settings.homePage === "blog") {
+    return (
+      <>
+        <JsonLd data={websiteSchema(settings)} />
+        <BlogList category={category} tag={tag} />
+      </>
+    );
+  }
+
+  // A page set as the home page is canonical at "/": redirect its own slug there
+  if (!isRoot && settings.homePage !== "blog" && slug.join("/") === settings.homePage) {
+    permanentRedirect("/");
+  }
+
   const page = await resolvePage(props);
   if (!page) {
     // No page at this path - check the redirect table before 404ing
-    const { slug } = await props.params;
-    const hit = await getRedirect(`/${slugFromParams(slug)}`);
+    const hit = await getRedirect(`/${slug?.length ? slug.join("/") : ""}`);
     if (hit) {
       if (hit.permanent) permanentRedirect(hit.toPath);
       redirect(hit.toPath);
@@ -66,15 +102,12 @@ export default async function CmsPage(props: Props) {
     notFound();
   }
 
-  const isHome = page.slug === "home";
-  const settings = isHome ? await getSettings() : null;
   const faqItems = collectFaqItems(page.blocks);
-
   const customSchemaData = parseJsonLd(page.customSchema);
 
   return (
     <>
-      {settings && <JsonLd data={websiteSchema(settings)} />}
+      {isRoot && <JsonLd data={websiteSchema(settings)} />}
       {faqItems.length > 0 && <JsonLd data={faqSchema(faqItems)} />}
       {customSchemaData && <JsonLd data={customSchemaData} />}
       <BlockRenderer blocks={page.blocks} />

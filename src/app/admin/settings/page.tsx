@@ -8,18 +8,21 @@ import { IntegrationsSettings } from "@/components/admin/IntegrationsSettings";
 import { ApiKeysSection } from "@/components/admin/ApiKeysSection";
 import { McpConnector } from "@/components/admin/McpConnector";
 import { siteUrl } from "@/lib/site-url";
+import { getLivePages } from "@/lib/queries";
 import { getOrCreateMcpToken } from "@/lib/mcp/token";
 import { SecurityUpdates } from "@/components/admin/SecurityUpdates";
 import { getUpdateStatus } from "@/lib/updates";
 
 export default async function SettingsPage() {
   const user = await requireAdmin();
-  const [rows, keys, updateStatus] = await Promise.all([
+  const [rows, keys, updateStatus, livePages] = await Promise.all([
     db.select().from(settings),
     db.select({ id: apiKeys.id, name: apiKeys.name, createdAt: apiKeys.createdAt, lastUsedAt: apiKeys.lastUsedAt }).from(apiKeys).orderBy(desc(apiKeys.createdAt)),
     getUpdateStatus(),
+    getLivePages(),
   ]);
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const pages = livePages.map((p) => ({ slug: p.slug, title: p.title }));
 
   const envManaged = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
   const integrationsEnv = {
@@ -43,7 +46,9 @@ export default async function SettingsPage() {
           footerText: (map.footerText as string) ?? "",
           social: (map.social as { label: string; href: string }[]) ?? [],
           gtmId: (map.gtmId as string) ?? "",
+          homePage: (map.homePage as string) ?? "home",
         }}
+        pages={pages}
       />
       <CloudinarySettings
         initial={{

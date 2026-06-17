@@ -153,6 +153,7 @@ export type SiteSettings = {
   footerText: string;
   social: { label: string; href: string }[];
   gtmId: string;
+  homePage: string;
 };
 
 const DEFAULT_SETTINGS: SiteSettings = {
@@ -163,6 +164,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   footerText: "",
   social: [],
   gtmId: "",
+  homePage: "home",
 };
 
 export const getSettings = unstable_cache(
