@@ -26,10 +26,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+        return token;
+      }
+      // On every later request, re-check the DB so a demoted or deleted user
+      // loses access immediately instead of keeping their stale JWT role until
+      // it expires. Returning null invalidates the session.
+      if (token.id) {
+        const { db } = await import("@/db");
+        const { users } = await import("@/db/schema");
+        const rows = await db.select({ role: users.role }).from(users).where(eq(users.id, token.id as string)).limit(1);
+        if (!rows[0]) return null;
+        token.role = rows[0].role;
       }
       return token;
     },

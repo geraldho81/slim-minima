@@ -14,6 +14,7 @@ export default defineBlock<Props>({
   description: "Raw HTML for embeds and custom markup (trusted content only)",
   icon: "</>",
   schema,
+  rawHtmlFields: ["html"],
   defaults: { html: "" },
   fields: [{ kind: "textarea", name: "html", label: "HTML", rows: 8 }],
   Render: (p) =>

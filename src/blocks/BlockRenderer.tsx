@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Block } from "@/blocks/types";
 import { registry } from "@/blocks/registry";
+import { sanitizeContentHtml } from "@/lib/sanitize";
 
 /**
  * Public-site block renderer (server component). Resolves each block's
@@ -24,6 +25,16 @@ async function renderBlock(block: Block): Promise<ReactNode> {
     return null;
   }
   const props = parsed.data;
+
+  // Sanitize any raw author HTML before it reaches dangerouslySetInnerHTML.
+  if (def.rawHtmlFields) {
+    for (const field of def.rawHtmlFields) {
+      const value = (props as Record<string, unknown>)[field as string];
+      if (typeof value === "string") {
+        (props as Record<string, unknown>)[field as string] = sanitizeContentHtml(value);
+      }
+    }
+  }
 
   const data = def.getData ? await def.getData(props) : undefined;
 

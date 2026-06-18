@@ -3,12 +3,22 @@ import { db } from "@/db";
 import { contactSubmissions } from "@/db/schema";
 import { verifyReceiver } from "@/lib/contact-token";
 import { getResendConfig } from "@/lib/integration-config";
+import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_FIELDS = 40;
 const MAX_LEN = 5000;
 
 export async function POST(req: Request) {
+  // Throttle per IP to stop submission floods / email-cost abuse.
+  const limit = rateLimit(`contact:${clientIp(req.headers)}`, 8, 10 * 60 * 1000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many submissions. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;

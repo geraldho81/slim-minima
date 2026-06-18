@@ -15,6 +15,7 @@ export default defineBlock<Props>({
   description: "Free-form text with headings, lists, links and images",
   icon: "¶",
   schema,
+  rawHtmlFields: ["html"],
   defaults: {
     html: "<p>Write something here. Use the editor in the settings panel to format text, add links and lists.</p>",
     width: "normal",

@@ -1,4 +1,5 @@
 import { htmlToMarkdown } from "@/lib/block-text";
+import { safeHref } from "@/lib/content";
 
 export { htmlToMarkdown };
 
@@ -38,8 +39,8 @@ function inlineToHtml(text: string): string {
     else if (m[7]) out += `<em>${inlineToHtml(m[8])}</em>`;
     else if (m[9]) out += `<code>${escapeHtml(m[10])}</code>`;
     else if (m[11]) out += `<s>${inlineToHtml(m[12])}</s>`;
-    else if (m[13]) out += `<img src="${escapeAttr(m[15])}" alt="${escapeAttr(m[14])}" />`;
-    else if (m[16]) out += `<a href="${escapeAttr(m[18])}">${inlineToHtml(m[17])}</a>`;
+    else if (m[13]) out += `<img src="${escapeAttr(safeHref(m[15]))}" alt="${escapeAttr(m[14])}" />`;
+    else if (m[16]) out += `<a href="${escapeAttr(safeHref(m[18]))}">${inlineToHtml(m[17])}</a>`;
     rest = rest.slice(m.index + m[0].length);
   }
   return out;
@@ -122,7 +123,7 @@ export function markdownToHtml(markdown: string): string {
     // A standalone image line becomes a bare <img>, not wrapped in a paragraph.
     const imgOnly = line.trim().match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
     if (imgOnly) {
-      out.push(`<img src="${escapeAttr(imgOnly[2])}" alt="${escapeAttr(imgOnly[1])}" />`);
+      out.push(`<img src="${escapeAttr(safeHref(imgOnly[2]))}" alt="${escapeAttr(imgOnly[1])}" />`);
       i++;
       continue;
     }

@@ -6,6 +6,7 @@ import { isLive, formatDate, readingTime } from "@/lib/content";
 import { auth } from "@/lib/auth";
 import { siteUrl } from "@/lib/site-url";
 import { JsonLd, articleSchema, breadcrumbSchema, parseJsonLd } from "@/lib/jsonld";
+import { sanitizeContentHtml } from "@/lib/sanitize";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -109,7 +110,7 @@ export default async function PostPage(props: Props) {
         // eslint-disable-next-line @next/next/no-img-element
         <img className="post-hero-img" src={post.heroImageUrl} alt={post.heroImageAlt ?? ""} />
       )}
-      <div className="cms-prose cms-narrow" style={{ margin: "0 auto" }} dangerouslySetInnerHTML={{ __html: post.body }} />
+      <div className="cms-prose cms-narrow" style={{ margin: "0 auto" }} dangerouslySetInnerHTML={{ __html: sanitizeContentHtml(post.body) }} />
       {post.tags.length > 0 && (
         <div className="cms-narrow" style={{ margin: "2rem auto 0", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {post.tags.map((tag) => (

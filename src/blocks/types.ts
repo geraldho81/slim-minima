@@ -47,6 +47,8 @@ export interface BlockDef<P = Record<string, unknown>> {
   zoneCount?: (props: P) => number;
   /** Server-side data loader, awaited by the public BlockRenderer. */
   getData?: (props: P) => Promise<unknown>;
+  /** Props holding raw author HTML. The public BlockRenderer sanitizes these before render. */
+  rawHtmlFields?: (keyof P)[];
   /** Pure component. Must work in both server and client trees - no hooks, no async. */
   Render: ComponentType<P & { ctx?: RenderContext }>;
   /** Optional editor-canvas stand-in for blocks whose Render needs server data. */

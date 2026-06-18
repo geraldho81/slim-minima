@@ -16,7 +16,13 @@ import { createHmac, timingSafeEqual } from "crypto";
  * recipient, so the form can only ever email the address the owner set.
  */
 function key(): string {
-  return process.env.AUTH_SECRET || "";
+  const secret = process.env.AUTH_SECRET;
+  // Fail closed: signing with an empty/weak key would let anyone forge a
+  // receiver token and turn the contact form into an open email relay.
+  if (!secret || secret.length < 16) {
+    throw new Error("AUTH_SECRET must be set (at least 16 characters) to sign contact-form tokens.");
+  }
+  return secret;
 }
 
 export function signReceiver(email: string): string {

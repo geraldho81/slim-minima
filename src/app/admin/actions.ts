@@ -546,9 +546,16 @@ function normalizePath(path: string): string {
 }
 
 export async function createRedirect(data: { fromPath: string; toPath: string; permanent: boolean }) {
-  await requireUser();
+  const user = await requireUser();
   const fromPath = normalizePath(data.fromPath);
-  const toPath = data.toPath.startsWith("http") ? data.toPath.trim() : normalizePath(data.toPath);
+  // External (or protocol-relative) targets can be used for phishing under the
+  // site's trusted domain, so only admins may create off-site redirects.
+  const raw = data.toPath.trim();
+  const isExternal = /^https?:\/\//i.test(raw) || raw.startsWith("//");
+  if (isExternal && user.role !== "admin") {
+    throw new Error("Only admins can create redirects to an external URL.");
+  }
+  const toPath = isExternal ? raw : normalizePath(data.toPath);
   if (fromPath === toPath) throw new Error("A redirect cannot point to itself.");
   await db
     .insert(redirects)
@@ -835,6 +842,7 @@ export async function saveIntegrations(values: {
 
 export async function createUser(data: { email: string; name: string; password: string; role: "admin" | "editor" }) {
   await requireAdmin();
+  if (data.password.length < 8) throw new Error("Password must be at least 8 characters.");
   const email = data.email.toLowerCase().trim();
   const passwordHash = await bcrypt.hash(data.password, 10);
   await db.insert(users).values({ email, name: data.name, passwordHash, role: data.role });
@@ -867,6 +875,7 @@ export async function deleteUser(id: string) {
 
 export async function resetUserPassword(id: string, password: string) {
   await requireAdmin();
+  if (password.length < 8) throw new Error("Password must be at least 8 characters.");
   const passwordHash = await bcrypt.hash(password, 10);
   await db.update(users).set({ passwordHash }).where(eq(users.id, id));
 }
