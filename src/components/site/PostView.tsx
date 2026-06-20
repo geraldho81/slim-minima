@@ -67,9 +67,9 @@ export function PostView({ row, settings }: { row: PostRow; settings: SiteSettin
         // eslint-disable-next-line @next/next/no-img-element
         <img className="post-hero-img" src={post.heroImageUrl} alt={post.heroImageAlt ?? ""} />
       )}
-      <div className="cms-prose" dangerouslySetInnerHTML={{ __html: sanitizeContentHtml(post.body) }} />
+      <div className="cms-prose post-body" dangerouslySetInnerHTML={{ __html: sanitizeContentHtml(post.body) }} />
       {post.tags.length > 0 && (
-        <div style={{ margin: "2rem 0 0", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div className="post-body" style={{ margin: "2rem 0 0", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {post.tags.map((tag) => (
             <Link key={tag} href={`/blog?tag=${encodeURIComponent(tag)}`} className="cms-btn cms-btn-ghost" style={{ padding: "0.3rem 0.9rem", fontSize: "0.8rem" }}>
               #{tag}
