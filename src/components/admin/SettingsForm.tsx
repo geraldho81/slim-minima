@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { saveSettings } from "@/app/admin/actions";
 import { MediaPicker } from "@/components/admin/MediaPicker";
 
@@ -25,7 +25,10 @@ export function SettingsForm({ initial, pages }: { initial: Values; pages: { slu
   const [showLogoPicker, setShowLogoPicker] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const valuesRef = useRef(values);
-  valuesRef.current = values;
+  // Keep the ref current for the debounced autosave callback.
+  useEffect(() => {
+    valuesRef.current = values;
+  });
 
   function update(partial: Partial<Values>) {
     setValues((v) => ({ ...v, ...partial }));

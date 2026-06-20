@@ -73,7 +73,11 @@ export function PageEditor({ initial }: { initial: PageData }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const pageRef = useRef(page);
-  pageRef.current = page;
+  // Keep the ref pointing at the latest page for the debounced save callback,
+  // which reads it well after render.
+  useEffect(() => {
+    pageRef.current = page;
+  });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSave = useCallback(async (override?: Partial<PageData>) => {

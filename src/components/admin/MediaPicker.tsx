@@ -17,7 +17,8 @@ type MediaItem = {
 
 export function MediaPicker({ onSelect, onClose }: { onSelect: (url: string) => void; onClose: () => void }) {
   const { cloudinary } = useIntegrations();
-  const [items, setItems] = useState<MediaItem[] | null>(null);
+  // Without Cloudinary there is no library to load, so start with an empty list.
+  const [items, setItems] = useState<MediaItem[] | null>(cloudinary ? null : []);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const { upload, uploading } = useUpload();
@@ -25,7 +26,6 @@ export function MediaPicker({ onSelect, onClose }: { onSelect: (url: string) => 
 
   useEffect(() => {
     if (cloudinary) listMedia().then(setItems).catch(() => setItems([]));
-    else setItems([]);
   }, [cloudinary]);
 
   async function handleFiles(files: FileList | null) {
@@ -41,7 +41,7 @@ export function MediaPicker({ onSelect, onClose }: { onSelect: (url: string) => 
     }
   }
 
-  function useUrl() {
+  function applyUrl() {
     const v = url.trim();
     if (!v) return;
     onSelect(v);
@@ -80,11 +80,11 @@ export function MediaPicker({ onSelect, onClose }: { onSelect: (url: string) => 
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                useUrl();
+                applyUrl();
               }
             }}
           />
-          <button type="button" className="ad-btn ad-btn-soft shrink-0" disabled={!url.trim()} onClick={useUrl}>
+          <button type="button" className="ad-btn ad-btn-soft shrink-0" disabled={!url.trim()} onClick={applyUrl}>
             Use URL
           </button>
         </div>

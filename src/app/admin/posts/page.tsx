@@ -1,13 +1,13 @@
-import { and, count, desc, eq, ilike, isNotNull, isNull, lt, or, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, ilike, isNotNull, isNull, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { posts, users, categories } from "@/db/schema";
 import { formatDate } from "@/lib/content";
 import { requireUser } from "@/lib/auth";
+import { purgeExpiredTrash } from "@/lib/trash";
 import { NewPostButton } from "@/components/admin/NewContentButtons";
 import { ContentListTable, type ListCounts, type ListView } from "@/components/admin/ContentListTable";
 
 const PER_PAGE = 20;
-const TRASH_RETENTION_DAYS = 30;
 
 type Search = Promise<{ view?: string; q?: string; p?: string; cat?: string }>;
 
@@ -20,8 +20,7 @@ export default async function PostsList({ searchParams }: { searchParams: Search
   const cat = /^[0-9a-f-]{36}$/i.test(rawCat) ? rawCat : "";
   const pageNum = Math.max(1, parseInt(params.p ?? "1", 10) || 1);
 
-  // Lazy purge: anything in the trash longer than the retention window goes for good.
-  await db.delete(posts).where(lt(posts.deletedAt, new Date(Date.now() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000)));
+  await purgeExpiredTrash("posts");
 
   const conds: SQL[] = [];
   if (view === "trash") conds.push(isNotNull(posts.deletedAt));

@@ -91,7 +91,11 @@ export function PostEditor({ initial, categories: initialCategories }: { initial
   const [revisionsOpen, setRevisionsOpen] = useState(false);
 
   const postRef = useRef(post);
-  postRef.current = post;
+  // Keep the ref pointing at the latest post for the debounced save callback,
+  // which reads it well after render.
+  useEffect(() => {
+    postRef.current = post;
+  });
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doSave = useCallback(async (override?: Partial<PostData>) => {

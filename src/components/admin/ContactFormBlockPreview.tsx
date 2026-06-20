@@ -30,35 +30,49 @@ type Loaded = {
 // Editor-canvas stand-in for the contact-form block. The canvas can't run the
 // block's server-side getData, so when a saved form is picked we load it here.
 export default function ContactFormBlockPreview(p: Props) {
-  const [form, setForm] = useState<Loaded | null>(null);
-  const [state, setState] = useState<"idle" | "loading" | "missing">("idle");
+  // Load the saved form (if one is picked) without any synchronous setState in
+  // the effect: store the result tagged with its formId, then derive the view
+  // state during render so it always tracks the current formId.
+  const [loaded, setLoaded] = useState<{ id: string; data: Loaded | null } | null>(null);
 
   useEffect(() => {
-    if (!p.formId) {
-      setForm(null);
-      setState("idle");
-      return;
-    }
-    setState("loading");
-    getContactFormForPreview(p.formId)
+    const formId = p.formId;
+    if (!formId) return;
+    let active = true;
+    getContactFormForPreview(formId)
       .then((row) => {
-        if (row) {
-          setForm({
-            fields: row.fields,
-            submitLabel: row.submitLabel,
-            successMode: row.successMode,
-            successMessage: row.successMessage,
-            successPath: row.successPath,
-            formName: row.formName,
-          });
-          setState("idle");
-        } else {
-          setForm(null);
-          setState("missing");
-        }
+        if (!active) return;
+        setLoaded({
+          id: formId,
+          data: row
+            ? {
+                fields: row.fields,
+                submitLabel: row.submitLabel,
+                successMode: row.successMode,
+                successMessage: row.successMessage,
+                successPath: row.successPath,
+                formName: row.formName,
+              }
+            : null,
+        });
       })
-      .catch(() => setState("missing"));
+      .catch(() => {
+        if (active) setLoaded({ id: formId, data: null });
+      });
+    return () => {
+      active = false;
+    };
   }, [p.formId]);
+
+  const loadedForThis = loaded?.id === p.formId ? loaded : null;
+  const form = loadedForThis?.data ?? null;
+  const state: "idle" | "loading" | "missing" = !p.formId
+    ? "idle"
+    : !loadedForThis
+      ? "loading"
+      : loadedForThis.data
+        ? "idle"
+        : "missing";
 
   const eff: Loaded | null = form ?? (p.formId ? null : { fields: p.fields, submitLabel: p.submitLabel, successMode: p.successMode, successMessage: p.successMessage, successPath: p.successPath, formName: p.formName });
 
