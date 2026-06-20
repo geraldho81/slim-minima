@@ -163,7 +163,7 @@ export function PostEditor({ initial, categories: initialCategories }: { initial
         <span className="shrink-0 text-xs" style={{ color: saveState === "error" ? "var(--ad-danger)" : "var(--ad-muted)" }}>
           {saveLabel}
         </span>
-        <a href={`/blog/${post.slug}?preview=1`} target="_blank" className="ad-btn ad-btn-soft">
+        <a href={`/preview/post/${post.slug}`} target="_blank" className="ad-btn ad-btn-soft">
           Preview
         </a>
         <button className="ad-icon-btn" onClick={() => setSidebarOpen((v) => !v)} title="Toggle post settings">

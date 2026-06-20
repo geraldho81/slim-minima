@@ -1,8 +1,24 @@
-import { getPageBySlug, getPostBySlug, getSettings } from "@/lib/queries";
+import { getLivePages, getLivePosts, getPageBySlug, getPostBySlug, getSettings } from "@/lib/queries";
 import { isLive } from "@/lib/content";
 import { blocksToMarkdown, htmlToMarkdown } from "@/lib/block-text";
 import { siteUrl } from "@/lib/site-url";
 import type { Block } from "@/blocks/types";
+
+// Edge-cached (ISR), like the HTML pages. These markdown mirrors are what AI
+// agents fetch, so they should be just as fast and just as cacheable. Listing
+// the live slugs opts the handler into the Full Route Cache; unlisted paths
+// render on demand, then cache.
+export const dynamic = "force-static";
+export const revalidate = 60;
+
+export async function generateStaticParams() {
+  const [pages, posts] = await Promise.all([getLivePages(), getLivePosts()]);
+  return [
+    { slug: [] as string[] },
+    ...pages.map((p) => ({ slug: p.slug.split("/") })),
+    ...posts.map((p) => ({ slug: ["blog", p.slug] })),
+  ];
+}
 
 function markdownResponse(body: string): Response {
   return new Response(body, {

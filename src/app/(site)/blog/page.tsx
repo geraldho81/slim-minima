@@ -3,6 +3,10 @@ import { getSettings } from "@/lib/queries";
 import { siteUrl } from "@/lib/site-url";
 import { BlogList } from "@/components/site/BlogList";
 
+// Edge-cached (ISR). Category/tag filtering happens on the client, so the
+// listing stays static and every post card ships in the server HTML.
+export const revalidate = 60;
+
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSettings();
   return {
@@ -12,7 +16,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function BlogIndex(props: { searchParams: Promise<{ category?: string; tag?: string }> }) {
-  const { category, tag } = await props.searchParams;
-  return <BlogList category={category} tag={tag} />;
+export default function BlogIndex() {
+  return <BlogList />;
 }

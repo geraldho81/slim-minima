@@ -218,7 +218,7 @@ export function PageEditor({ initial }: { initial: PageData }) {
   const saveLabel =
     saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving..." : saveState === "dirty" ? "Unsaved changes" : "Save failed - retrying on next change";
 
-  const previewHref = `/${page.slug === "home" ? "" : page.slug}?preview=1`;
+  const previewHref = `/preview/page/${page.slug}`;
   const chip = STATUS_CHIP[page.status];
 
   return (

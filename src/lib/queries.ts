@@ -14,9 +14,17 @@ export const CACHE_TAGS = {
   contactForms: "cms-contact-forms",
 } as const;
 
+// During a build with no database configured (the framework repo itself, which
+// ships no .env.local), the public pages are still statically prerendered.
+// Without a connection string there is nothing to read, so reads return safe
+// empties instead of throwing. Deployed sites always set DATABASE_URL, so this
+// guard never fires at runtime and real connection errors still surface.
+const hasDb = () => !!process.env.DATABASE_URL;
+
 export const getPageBySlug = (slug: string) =>
   unstable_cache(
     async () => {
+      if (!hasDb()) return null;
       const rows = await db
         .select()
         .from(pages)
@@ -32,6 +40,7 @@ export const getPageBySlug = (slug: string) =>
 
 export const getLivePages = unstable_cache(
   async () => {
+    if (!hasDb()) return [];
     const rows = await db
       .select()
       .from(pages)
@@ -45,6 +54,7 @@ export const getLivePages = unstable_cache(
 
 export const getLivePosts = unstable_cache(
   async () => {
+    if (!hasDb()) return [];
     const rows = await db
       .select({
         id: posts.id,
@@ -83,6 +93,7 @@ export const getLivePosts = unstable_cache(
 export const getPostBySlug = (slug: string) =>
   unstable_cache(
     async () => {
+      if (!hasDb()) return null;
       const rows = await db
         .select({
           post: posts,
@@ -102,7 +113,7 @@ export const getPostBySlug = (slug: string) =>
   )();
 
 export const getCategories = unstable_cache(
-  async () => db.select().from(categories).orderBy(categories.name),
+  async () => (hasDb() ? db.select().from(categories).orderBy(categories.name) : []),
   ["categories"],
   { tags: [CACHE_TAGS.posts], revalidate: 60 }
 );
@@ -110,6 +121,7 @@ export const getCategories = unstable_cache(
 export const getRedirect = (fromPath: string) =>
   unstable_cache(
     async () => {
+      if (!hasDb()) return null;
       const rows = await db.select().from(redirects).where(eq(redirects.fromPath, fromPath)).limit(1);
       return rows[0] ?? null;
     },
@@ -120,6 +132,7 @@ export const getRedirect = (fromPath: string) =>
 export const getMenu = (name: string) =>
   unstable_cache(
     async () => {
+      if (!hasDb()) return [];
       const rows = await db.select().from(menus).where(eq(menus.name, name)).limit(1);
       return rows[0]?.items ?? [];
     },
@@ -133,6 +146,7 @@ export const CONTACT_FORMS_KEY = "contactForms";
 
 export const getContactForms = unstable_cache(
   async (): Promise<ContactForm[]> => {
+    if (!hasDb()) return [];
     const rows = await db.select().from(settings).where(eq(settings.key, CONTACT_FORMS_KEY)).limit(1);
     return (rows[0]?.value as ContactForm[] | undefined) ?? [];
   },
@@ -169,6 +183,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
 
 export const getSettings = unstable_cache(
   async (): Promise<SiteSettings> => {
+    if (!hasDb()) return DEFAULT_SETTINGS;
     const rows = await db.select().from(settings);
     const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
     return { ...DEFAULT_SETTINGS, ...(map as Partial<SiteSettings>) };

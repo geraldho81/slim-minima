@@ -1,17 +1,28 @@
 import type { Metadata } from "next";
 import { notFound, redirect, permanentRedirect } from "next/navigation";
-import { BlockRenderer } from "@/blocks/BlockRenderer";
 import { BlogList } from "@/components/site/BlogList";
-import { getPageBySlug, getRedirect, getSettings } from "@/lib/queries";
+import { getLivePages, getPageBySlug, getRedirect, getSettings } from "@/lib/queries";
 import { isLive } from "@/lib/content";
-import { auth } from "@/lib/auth";
 import { siteUrl } from "@/lib/site-url";
-import { JsonLd, websiteSchema, faqSchema, parseJsonLd } from "@/lib/jsonld";
-import { collectFaqItems } from "@/lib/block-text";
+import { JsonLd, websiteSchema } from "@/lib/jsonld";
+import { PageView } from "@/components/site/PageView";
+
+// Edge-cached (ISR): the public page renders published content only, with no
+// per-request reads (no searchParams, no auth), so Vercel serves it from cache.
+// Admin edits invalidate it instantly via revalidateTag/revalidatePath; this is
+// the periodic safety net. Draft preview lives at /preview, not here.
+export const revalidate = 60;
+
+// Opt the route into the Full Route Cache. The empty slug is the home page;
+// every live page slug is listed so the edge can serve it. Unlisted paths
+// render on demand, then cache.
+export async function generateStaticParams() {
+  const pages = await getLivePages();
+  return [{ slug: [] as string[] }, ...pages.map((p) => ({ slug: p.slug.split("/") }))];
+}
 
 type Props = {
   params: Promise<{ slug?: string[] }>;
-  searchParams: Promise<{ preview?: string; category?: string; tag?: string }>;
 };
 
 // The page slug that serves at "/", per the homePage setting. "blog" means the
@@ -21,19 +32,13 @@ async function homePageSlug(): Promise<string> {
   return settings.homePage || "home";
 }
 
-async function resolvePage(props: Props) {
-  const { slug } = await props.params;
-  const { preview } = await props.searchParams;
-  const isRoot = !slug?.length;
-  const effectiveSlug = isRoot ? await homePageSlug() : slug.join("/");
+async function resolvePage(slugParts: string[] | undefined) {
+  const isRoot = !slugParts?.length;
+  const effectiveSlug = isRoot ? await homePageSlug() : slugParts.join("/");
   const page = await getPageBySlug(effectiveSlug);
   if (!page) return null;
-  if (!isLive(page.status, page.publishAt)) {
-    // Drafts are visible only to signed-in editors with ?preview=1
-    if (preview !== "1") return null;
-    const session = await auth();
-    if (!session?.user) return null;
-  }
+  // Drafts are never served on the public route - they live at /preview.
+  if (!isLive(page.status, page.publishAt)) return null;
   return page;
 }
 
@@ -50,7 +55,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     };
   }
 
-  const page = await resolvePage(props);
+  const page = await resolvePage(slug);
   if (!page) return {};
   const title = page.metaTitle || `${page.title} | ${settings.siteName}`;
   const description = page.metaDescription || settings.tagline || undefined;
@@ -72,7 +77,6 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 export default async function CmsPage(props: Props) {
   const { slug } = await props.params;
-  const { category, tag } = await props.searchParams;
   const isRoot = !slug?.length;
   const settings = await getSettings();
 
@@ -81,7 +85,7 @@ export default async function CmsPage(props: Props) {
     return (
       <>
         <JsonLd data={websiteSchema(settings)} />
-        <BlogList category={category} tag={tag} />
+        <BlogList />
       </>
     );
   }
@@ -91,7 +95,7 @@ export default async function CmsPage(props: Props) {
     permanentRedirect("/");
   }
 
-  const page = await resolvePage(props);
+  const page = await resolvePage(slug);
   if (!page) {
     // No page at this path - check the redirect table before 404ing
     const hit = await getRedirect(`/${slug?.length ? slug.join("/") : ""}`);
@@ -102,15 +106,5 @@ export default async function CmsPage(props: Props) {
     notFound();
   }
 
-  const faqItems = collectFaqItems(page.blocks);
-  const customSchemaData = parseJsonLd(page.customSchema);
-
-  return (
-    <>
-      {isRoot && <JsonLd data={websiteSchema(settings)} />}
-      {faqItems.length > 0 && <JsonLd data={faqSchema(faqItems)} />}
-      {customSchemaData && <JsonLd data={customSchemaData} />}
-      <BlockRenderer blocks={page.blocks} />
-    </>
-  );
+  return <PageView page={page} settings={settings} isHome={isRoot} />;
 }

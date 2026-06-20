@@ -106,8 +106,11 @@ export function ContentListTable({ kind, rows, counts, view, q, page, totalPages
   ];
 
   function publicUrl(row: ListRow) {
-    const path = kind === "pages" ? (row.slug === "home" ? "/" : `/${row.slug}`) : `/blog/${row.slug}`;
-    return row.status === "published" ? path : `${path}?preview=1`;
+    if (row.status === "published") {
+      return kind === "pages" ? (row.slug === "home" ? "/" : `/${row.slug}`) : `/blog/${row.slug}`;
+    }
+    // Drafts are not public - point to the auth-gated preview route instead.
+    return kind === "pages" ? `/preview/page/${row.slug}` : `/preview/post/${row.slug}`;
   }
 
   const emptyMessage =
