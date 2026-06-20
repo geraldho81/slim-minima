@@ -701,7 +701,7 @@ main { min-height: 60vh; }
 .blog-hero { padding: 9rem 0 2.5rem; }
 .blog-hero h1 { margin-bottom: 0.25rem; }
 .blog-hero p { color: var(--muted); font-size: 1.1rem; }
-.post-header { padding: 9rem 0 1rem; max-width: 46rem; }
+.post-header { padding: 9rem 0 1rem; }
 .post-header h1 { font-size: clamp(2rem, 4vw, 2.9rem); }
 .post-meta {
   display: flex;
