@@ -40,6 +40,39 @@ Do not trigger deployments via Vercel MCP tools, the Vercel CLI, or any other pl
 `vercel.json` existing in this repo does not mean you should deploy - it only configures cron jobs.
 The deployment decision belongs to the user, regardless of platform.
 
+## Hard rule: never hardcode content
+
+**No visible text or content may be hardcoded into the site. Every word the
+visitor reads must live in the CMS and be editable from `/admin`.** This is the
+whole point of the framework - a marketer must be able to change any copy
+without touching code.
+
+This applies to ALL content, with no exceptions:
+- Every heading (H1, H2, H3, ...), paragraph, and body text.
+- Every button label, link text, eyebrow, badge, and caption.
+- Every list item, stat, quote, FAQ question/answer, pricing line, and form label.
+- Every image (URL + alt text), logo, and media reference.
+- Site-wide text: nav labels, footer text, site name, tagline.
+
+**What this means in practice:**
+- Building a page = composing blocks with content stored in their props, created
+  through the admin, CLI, or REST API - never a hand-written `.tsx` page with
+  copy baked in.
+- A block's `Render` may contain only **structure and styling**. Every piece of
+  text or media it displays must come from `props` (declared in its `schema`
+  with a matching entry in `fields` so it is editable). If you wrote a string of
+  copy directly in JSX, that is a bug.
+- Need a new section the existing blocks cannot express? Create a new block type
+  with `fields` for its text/media (see "The block engine"), then fill it with
+  content. Do not hardcode the section as a one-off component.
+- Site-wide chrome (nav, footer, site name, tagline, logo) comes from `menus`
+  and `settings`, not from literals in layout files.
+
+If you find yourself typing real copy into a `.tsx` file, stop: it belongs in a
+block field, a setting, a menu, or page/post content instead. The only strings
+that may live in code are structural/UI scaffolding with no field (placeholder
+defaults belong in the block's `defaults`, not inline in `Render`).
+
 ## Stack
 
 - Next.js (App Router) + TypeScript + Tailwind v4
@@ -255,6 +288,9 @@ Field kinds: `text`, `textarea`, `number`, `toggle`, `select` (with options),
 public path), `richtext` (Tiptap), `list` (repeatable group).
 
 Rules for `Render`:
+- **No hardcoded content** - every text or media value must come from `props`
+  (declared in `schema` + `fields` so it is editable). Render is structure and
+  styling only. See "Hard rule: never hardcode content".
 - Pure synchronous component - no hooks, no async.
 - Server data? Add `getData: async (props) => ...` (use `await import("@/lib/queries")` inside) and read `p.ctx?.data`; provide a `Preview`.
 - Container? Add `zoneCount: (props) => n` and render `p.ctx?.zones[i]`.
