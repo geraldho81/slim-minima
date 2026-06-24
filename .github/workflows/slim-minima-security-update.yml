@@ -47,7 +47,7 @@ jobs:
           done < .github/security-paths.txt
           npm pkg set version="${{ inputs.version }}"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
 
