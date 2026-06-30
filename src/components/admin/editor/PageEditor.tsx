@@ -596,8 +596,13 @@ function PageInspector({
           </label>
           <div className="ad-field">
             <label className="ad-label">Custom schema markup (JSON-LD)</label>
-            <textarea className="ad-textarea" rows={6} value={page.customSchema ?? ""} onChange={(e) => update({ customSchema: e.target.value || null })} placeholder={'{\n  "@type": "Product",\n  "name": "..."\n}'} style={{ fontFamily: "monospace", fontSize: "13px" }} />
-            <p style={{ fontSize: "12px", color: "var(--ad-muted)", marginTop: "0.4rem" }}>Generate your schema at <a href="https://technicalseo.com/tools/schema-markup-generator/" target="_blank" rel="noopener noreferrer">TechnicalSEO.com</a> and validate with <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer">Google Rich Results Test</a>.</p>
+            <p style={{ fontSize: "12px", color: "var(--ad-muted)", marginTop: "-0.1rem", marginBottom: "0.5rem", lineHeight: 1.5 }}>
+              Schema markup is hidden code that tells Google and AI search engines what this page is (a product, service, FAQ, local business, and so on). Done well, it can earn rich results like prices, ratings, and FAQs in search.
+              <br />
+              Optional. Slim Minima already adds standard schema (and FAQ schema when you use FAQ blocks) automatically, so only use this box to add extra structured data of your own. Paste a single JSON-LD object below.
+            </p>
+            <textarea className="ad-textarea" rows={6} value={page.customSchema ?? ""} onChange={(e) => update({ customSchema: e.target.value || null })} placeholder={'{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "..."\n}'} style={{ fontFamily: "monospace", fontSize: "13px" }} />
+            <p style={{ fontSize: "12px", color: "var(--ad-muted)", marginTop: "0.4rem", lineHeight: 1.5 }}>How to do it: build your markup at <a href="https://technicalseo.com/tools/schema-markup-generator/" target="_blank" rel="noopener noreferrer">TechnicalSEO.com</a>, copy the JSON, paste it above, then check it with the <a href="https://search.google.com/test/rich-results" target="_blank" rel="noopener noreferrer">Google Rich Results Test</a>. Invalid JSON is ignored, so nothing breaks if you get it wrong.</p>
           </div>
         </>
       )}
